@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, FileText, Search, User, Stethoscope, Trash } from 'lucide-react';
+import { Plus, FileText, Search, User, Stethoscope, Trash, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -58,6 +58,27 @@ const Records = () => {
         const updated = [...medicines];
         updated.splice(index, 1);
         setMedicines(updated);
+    };
+
+    const handleAiSuggest = async () => {
+        if (!formData.diagnosis) {
+            toast.error('Please enter a diagnosis first');
+            return;
+        }
+        const toastId = toast.loading('AI is generating a prescription...');
+        try {
+            const res = await api.post('/predict/prescription', { diagnosis: formData.diagnosis });
+            if (res.data && res.data.length > 0) {
+                setMedicines([...medicines, ...res.data]);
+                toast.success('Prescription suggested!');
+            } else {
+                toast.error('No suggestions found');
+            }
+        } catch (err) {
+            toast.error('Failed to get AI suggestions');
+        } finally {
+            toast.dismiss(toastId);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -187,7 +208,16 @@ const Records = () => {
 
                             {/* Structured Prescription */}
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                <h4 className="font-bold text-slate-700 mb-2 text-sm">Prescription</h4>
+                                <div className="flex justify-between items-center mb-2">
+                                    <h4 className="font-bold text-slate-700 text-sm">Prescription</h4>
+                                    <button
+                                        type="button"
+                                        onClick={handleAiSuggest}
+                                        className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded flex items-center gap-1 hover:bg-purple-200 transition-colors"
+                                    >
+                                        <Sparkles size={12} /> AI Suggest
+                                    </button>
+                                </div>
                                 <div className="grid grid-cols-4 gap-2 mb-2">
                                     <input placeholder="Medicine Name" className="input-field text-sm" value={newMed.name} onChange={e => setNewMed({ ...newMed, name: e.target.value })} />
                                     <input placeholder="Dosage (e.g. 500mg)" className="input-field text-sm" value={newMed.dosage} onChange={e => setNewMed({ ...newMed, dosage: e.target.value })} />

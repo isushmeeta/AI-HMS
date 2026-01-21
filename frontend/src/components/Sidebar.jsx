@@ -10,13 +10,35 @@ const Sidebar = () => {
 
     const menuItems = [
         { icon: Home, label: 'Dashboard', path: '/' },
-        ...(user?.role === 'Patient' ? [{ icon: Calendar, label: 'Book Appointment', path: '/book-appointment' }] : []),
-        { icon: Users, label: 'Patients', path: '/patients' },
-        { icon: Stethoscope, label: 'Doctors', path: '/doctors' },
-        { icon: Calendar, label: 'Appointments', path: '/appointments' },
-        { icon: Activity, label: 'Records', path: '/records' },
-        { icon: Brain, label: 'AI Insights', path: '/ai-insights' },
-        { icon: Settings, label: 'Settings', path: '/settings' },
+        // Patient specific
+        ...(user?.role === 'Patient' ? [
+            { icon: Calendar, label: 'Book Appointment', path: '/book-appointment' },
+            { icon: Activity, label: 'My Records', path: '/records' },
+        ] : []),
+
+        // Doctor specific
+        ...(user?.role === 'Doctor' ? [
+            { icon: Users, label: 'My Patients', path: '/patients' },
+            { icon: Calendar, label: 'Appointments', path: '/appointments' },
+            { icon: Activity, label: 'Records', path: '/records' },
+            { icon: Brain, label: 'AI Insights', path: '/ai-insights' },
+        ] : []),
+
+        // Receptionist specific
+        ...(user?.role === 'Receptionist' ? [
+            { icon: Users, label: 'Patients', path: '/patients' },
+            { icon: Calendar, label: 'Appointments', path: '/appointments' },
+            { icon: Activity, label: 'Registration', path: '/patient-register' },
+        ] : []),
+
+        // Admin specific
+        ...(user?.role === 'Admin' ? [
+            { icon: Users, label: 'Patients', path: '/patients' },
+            { icon: Stethoscope, label: 'Doctors', path: '/doctors' },
+            { icon: Activity, label: 'All Records', path: '/records' },
+            { icon: Brain, label: 'System Insights', path: '/ai-insights' },
+            { icon: Settings, label: 'Settings', path: '/settings' },
+        ] : []),
     ];
 
     return (
