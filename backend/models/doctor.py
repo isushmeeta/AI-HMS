@@ -1,0 +1,19 @@
+from . import db
+
+class Doctor(db.Model):
+    __tablename__ = 'doctors'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    specialization = db.Column(db.String(100), nullable=False)
+    contact = db.Column(db.String(20), nullable=True)
+    availability = db.Column(db.String(200), nullable=True) # e.g., "Mon-Fri 09:00-17:00"
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'specialization': self.specialization,
+            'contact': self.contact,
+            'availability': self.availability
+        }
