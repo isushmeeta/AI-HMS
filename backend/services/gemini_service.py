@@ -11,9 +11,8 @@ class GeminiService:
         # Called after app context is set up or lazily
         api_key = current_app.config.get('GEMINI_API_KEY')
         if api_key:
-        if api_key:
             genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.model = genai.GenerativeModel('gemini-flash-latest')
 
     def _get_model(self):
         if not self.model:
