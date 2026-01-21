@@ -29,4 +29,28 @@ class MLService:
         probability = self.readmission_model.predict_proba(df)[0][1] # Prob of class 1 (Yes)
         return round(float(probability) * 100, 2)
 
+    def predict_disease(self, symptoms_text):
+        # Basic Rule-Based System (Mock AI)
+        symptoms = symptoms_text.lower()
+        predictions = []
+
+        rules = {
+            'flu': ['fever', 'cough', 'headache', 'fatigue'],
+            'covid-19': ['fever', 'cough', 'loss of taste', 'breathing difficulty'],
+            'diabetes': ['thirst', 'frequency of urination', 'hunger', 'fatigue'],
+            'hypertension': ['headache', 'dizziness', 'blurred vision'],
+            'migraine': ['headache', 'nausea', 'sensitivity to light'],
+            'malaria': ['fever', 'chills', 'sweating', 'headache'],
+            'pneumonia': ['cough', 'fever', 'chills', 'breathing difficulty']
+        }
+
+        for disease, keywords in rules.items():
+            match_count = sum(1 for k in keywords if k in symptoms)
+            if match_count >= 1:
+                confidence = min((match_count / len(keywords)) * 100 + 40, 95) # Base 40%, cap 95%
+                predictions.append({'condition': disease.title(), 'confidence': round(confidence, 1)})
+        
+        predictions.sort(key=lambda x: x['confidence'], reverse=True)
+        return predictions[:3] if predictions else [{'condition': 'General Viral Infection', 'confidence': 30.0}]
+
 ml_service = MLService()

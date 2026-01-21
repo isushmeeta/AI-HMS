@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, FileText, Search, User, Stethoscope } from 'lucide-react';
+import { Plus, FileText, Search, User, Stethoscope, Trash, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -10,9 +10,13 @@ const Records = () => {
     const [doctors, setDoctors] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Form States
     const [formData, setFormData] = useState({
-        patient_id: '', doctor_id: '', diagnosis: '', prescription: '', tests: ''
+        patient_id: '', doctor_id: '', diagnosis: '', tests: ''
     });
+    const [medicines, setMedicines] = useState([]);
+    const [newMed, setNewMed] = useState({ name: '', dosage: '', frequency: '1-0-1', duration: '5 days' });
 
     useEffect(() => {
         fetchRecords();
@@ -41,12 +45,53 @@ const Records = () => {
         setDoctors(res.data);
     };
 
+    const handleAddMedicine = () => {
+        if (!newMed.name || !newMed.dosage) {
+            toast.error('Please enter medicine name and dosage');
+            return;
+        }
+        setMedicines([...medicines, newMed]);
+        setNewMed({ name: '', dosage: '', frequency: '1-0-1', duration: '5 days' });
+    };
+
+    const removeMedicine = (index) => {
+        const updated = [...medicines];
+        updated.splice(index, 1);
+        setMedicines(updated);
+    };
+
+    const handleAiSuggest = async () => {
+        if (!formData.diagnosis) {
+            toast.error('Please enter a diagnosis first');
+            return;
+        }
+        const toastId = toast.loading('AI is generating a prescription...');
+        try {
+            const res = await api.post('/predict/prescription', { diagnosis: formData.diagnosis });
+            if (res.data && res.data.length > 0) {
+                setMedicines([...medicines, ...res.data]);
+                toast.success('Prescription suggested!');
+            } else {
+                toast.error('No suggestions found');
+            }
+        } catch (err) {
+            toast.error('Failed to get AI suggestions');
+        } finally {
+            toast.dismiss(toastId);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/medical_records', formData);
+            await api.post('/medical_records', {
+                ...formData,
+                prescription: medicines
+            });
             toast.success('Medical Record saved');
             setShowModal(false);
+            setMedicines([]);
+            setFormData({ patient_id: '', doctor_id: '', diagnosis: '', tests: '' });
             fetchRecords();
         } catch (err) {
             toast.error('Failed to save record');
@@ -107,18 +152,22 @@ const Records = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-1">
                                     <span className="text-xs font-bold text-slate-400 uppercase">Diagnosis</span>
                                     <p className="text-slate-700 font-medium">{record.diagnosis}</p>
                                 </div>
                                 <div className="space-y-1">
                                     <span className="text-xs font-bold text-slate-400 uppercase">Prescription</span>
-                                    <p className="text-slate-700">{record.prescription || 'N/A'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-xs font-bold text-slate-400 uppercase">Tests Recommended</span>
-                                    <p className="text-slate-700">{record.tests || 'N/A'}</p>
+                                    {Array.isArray(record.prescription) ? (
+                                        <ul className="text-sm text-slate-700 space-y-1">
+                                            {record.prescription.map((med, i) => (
+                                                <li key={i}>• <b>{med.name}</b> - {med.dosage} ({med.frequency})</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-slate-700">{typeof record.prescription === 'string' ? record.prescription : 'No prescription'}</p>
+                                    )}
                                 </div>
                             </div>
                         </motion.div>
@@ -127,13 +176,13 @@ const Records = () => {
             </div>
 
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 my-8">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold flex items-center gap-2">
                                 <Stethoscope className="text-primary" /> New Medical Record
                             </h3>
-                            <button onClick={() => setShowModal(false)} className="text-slate-400">×</button>
+                            <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">×</button>
                         </div>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -156,16 +205,56 @@ const Records = () => {
                                 <label className="block text-sm font-medium mb-1">Diagnosis</label>
                                 <textarea rows="2" className="input-field" onChange={e => setFormData({ ...formData, diagnosis: e.target.value })} required />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Prescription</label>
-                                    <textarea rows="3" className="input-field" onChange={e => setFormData({ ...formData, prescription: e.target.value })} />
+
+                            {/* Structured Prescription */}
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                <div className="flex justify-between items-center mb-2">
+                                    <h4 className="font-bold text-slate-700 text-sm">Prescription</h4>
+                                    <button
+                                        type="button"
+                                        onClick={handleAiSuggest}
+                                        className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded flex items-center gap-1 hover:bg-purple-200 transition-colors"
+                                    >
+                                        <Sparkles size={12} /> AI Suggest
+                                    </button>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Test Recommendations</label>
-                                    <textarea rows="3" className="input-field" onChange={e => setFormData({ ...formData, tests: e.target.value })} />
+                                <div className="grid grid-cols-4 gap-2 mb-2">
+                                    <input placeholder="Medicine Name" className="input-field text-sm" value={newMed.name} onChange={e => setNewMed({ ...newMed, name: e.target.value })} />
+                                    <input placeholder="Dosage (e.g. 500mg)" className="input-field text-sm" value={newMed.dosage} onChange={e => setNewMed({ ...newMed, dosage: e.target.value })} />
+                                    <select className="input-field text-sm" value={newMed.frequency} onChange={e => setNewMed({ ...newMed, frequency: e.target.value })}>
+                                        <option>1-0-1</option>
+                                        <option>1-1-1</option>
+                                        <option>1-0-0</option>
+                                        <option>0-0-1</option>
+                                        <option>SOS</option>
+                                    </select>
+                                    <div className="flex gap-2">
+                                        <input placeholder="Duration" className="input-field text-sm flex-1" value={newMed.duration} onChange={e => setNewMed({ ...newMed, duration: e.target.value })} />
+                                        <button type="button" onClick={handleAddMedicine} className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"><Plus size={18} /></button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2 mt-3">
+                                    {medicines.map((med, idx) => (
+                                        <div key={idx} className="flex justify-between items-center bg-white p-2 rounded border border-slate-200 text-sm">
+                                            <span className="font-medium text-slate-700">{med.name}</span>
+                                            <div className="flex items-center gap-4 text-slate-500">
+                                                <span>{med.dosage}</span>
+                                                <span className="bg-slate-100 px-2 rounded text-xs">{med.frequency}</span>
+                                                <span>{med.duration}</span>
+                                                <button type="button" onClick={() => removeMedicine(idx)} className="text-red-400 hover:text-red-600"><Trash size={16} /></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {medicines.length === 0 && <p className="text-xs text-slate-400 text-center italic">No medicines added.</p>}
                                 </div>
                             </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Test Recommendations</label>
+                                <textarea rows="2" className="input-field" onChange={e => setFormData({ ...formData, tests: e.target.value })} />
+                            </div>
+
                             <div className="flex justify-end gap-2 pt-4">
                                 <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">Cancel</button>
                                 <button type="submit" className="btn-primary">Save Record</button>

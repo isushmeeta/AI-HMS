@@ -16,6 +16,15 @@ class MedicalRecord(db.Model):
     doctor = db.relationship('Doctor', backref='medical_records')
 
     def to_dict(self):
+        # Try to parse prescription as JSON, otherwise return as string
+        prescription_data = self.prescription
+        try:
+            import json
+            if self.prescription:
+                prescription_data = json.loads(self.prescription)
+        except (ValueError, TypeError):
+            pass
+
         return {
             'id': self.id,
             'patient_id': self.patient_id,
@@ -23,7 +32,7 @@ class MedicalRecord(db.Model):
             'doctor_id': self.doctor_id,
             'doctor_name': self.doctor.name if self.doctor else "Unknown",
             'diagnosis': self.diagnosis,
-            'prescription': self.prescription,
+            'prescription': prescription_data,
             'tests': self.tests,
             'visit_date': self.visit_date.isoformat()
         }
