@@ -10,6 +10,7 @@ from routes.ai_routes import ai_bp
 from routes.analytics_routes import analytics_bp
 from routes.auth_routes import auth_bp
 from routes.chat_routes import chat_bp
+from routes.notification_routes import notification_bp
 
 def create_app():
     app = Flask(__name__)
@@ -26,6 +27,7 @@ def create_app():
     app.register_blueprint(analytics_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/api')
     app.register_blueprint(chat_bp, url_prefix='/api')
+    app.register_blueprint(notification_bp, url_prefix='/api')
 
     with app.app_context():
         db.create_all()
