@@ -6,10 +6,11 @@ import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
     const location = useLocation();
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
 
     const menuItems = [
         { icon: Home, label: 'Dashboard', path: '/' },
+        ...(user?.role === 'Patient' ? [{ icon: Calendar, label: 'Book Appointment', path: '/book-appointment' }] : []),
         { icon: Users, label: 'Patients', path: '/patients' },
         { icon: Stethoscope, label: 'Doctors', path: '/doctors' },
         { icon: Calendar, label: 'Appointments', path: '/appointments' },

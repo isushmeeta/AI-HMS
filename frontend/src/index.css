@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0f766e;
+  --color-secondary: #0e7490;
+  --color-accent: #f59e0b;
+  --color-dark: #0f172a;
+  --color-light: #f8fafc;
+}
+
+@layer base {
+  body {
+    /* Use standardized tailwind colors or variables */
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl;
+  }
+
+  .glass-card {
+    @apply bg-white/50 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl transition-all duration-300 hover:shadow-xl hover:bg-white/60;
+  }
+
+  .btn-primary {
+    @apply px-6 py-2.5 bg-gradient-to-r from-teal-700 to-cyan-700 text-white rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200 font-medium;
+  }
+
+  .btn-ghost {
+    @apply px-6 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 font-medium;
+  }
+
+  .btn-danger {
+    @apply px-6 py-2.5 bg-red-500 text-white rounded-xl shadow-md hover:bg-red-600 transition-all duration-200 font-medium;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[--color-primary]/50 focus:border-[--color-primary]/50 transition-all duration-200 backdrop-blur-sm;
+  }
+}
