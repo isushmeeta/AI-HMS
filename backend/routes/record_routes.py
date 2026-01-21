@@ -7,13 +7,19 @@ record_bp = Blueprint('record_bp', __name__)
 
 @record_bp.route('/medical_records', methods=['POST'])
 def create_record():
+    import json
     data = request.get_json()
     try:
+        # Serialize prescription to JSON string if it's a list/dict
+        prescription_val = data.get('prescription')
+        if isinstance(prescription_val, (list, dict)):
+            prescription_val = json.dumps(prescription_val)
+
         new_record = MedicalRecord(
             patient_id=data['patient_id'],
             doctor_id=data['doctor_id'],
             diagnosis=data['diagnosis'],
-            prescription=data.get('prescription'),
+            prescription=prescription_val,
             tests=data.get('tests')
         )
         db.session.add(new_record)

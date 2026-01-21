@@ -31,7 +31,23 @@ def add_patient():
 
 @patient_bp.route('/patients', methods=['GET'])
 def get_patients():
-    patients = Patient.query.all()
+    doctor_id = request.args.get('doctor_id')
+    
+    if doctor_id:
+        from models.appointment import Appointment
+        # Join Patient with Appointment to find patients who have an appointment with this doctor
+        patients = Patient.query.join(Appointment, Appointment.patient_id == Patient.id)\
+                                .filter(Appointment.doctor_id == doctor_id).all()
+        # Use set to remove duplicates if a patient has multiple appointments with the same doctor
+        # SQLAlchmey .distinct() can also work but list(set()) is Pythonic safe fallback for simple object lists, 
+        # though objects might not hash correctly without __hash__.
+        # Better to query distinct IDs via SQLAlchemy:
+        patients = Patient.query.join(Appointment, Appointment.patient_id == Patient.id)\
+                                .filter(Appointment.doctor_id == doctor_id)\
+                                .distinct().all()
+    else:
+        patients = Patient.query.all()
+        
     return jsonify([p.to_dict() for p in patients]), 200
 
 @patient_bp.route('/patients/<int:id>', methods=['GET'])
@@ -63,8 +79,21 @@ def update_patient(id):
 
 @patient_bp.route('/patients/<int:id>', methods=['DELETE'])
 def delete_patient(id):
-    patient = Patient.query.get_or_404(id)
+    # Check for Admin Role
+    import jwt
+    from flask import current_app
+    
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return jsonify({'error': 'Missing token'}), 401
+    
     try:
+        token = auth_header.split(" ")[1]
+        decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+        if decoded.get('role') != 'Admin':
+            return jsonify({'error': 'Unauthorized: Only Admins can delete patients'}), 403
+            
+        patient = Patient.query.get_or_404(id)
         db.session.delete(patient)
         db.session.commit()
         return jsonify({'message': 'Patient deleted successfully'}), 200

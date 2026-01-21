@@ -22,3 +22,17 @@ def predict_readmission():
         return jsonify({'readmission_probability': probability}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/predict/disease', methods=['POST'])
+def predict_disease():
+    data = request.get_json()
+    # Expects: symptoms (string)
+    try:
+        symptoms = data.get('symptoms', '')
+        if not symptoms:
+            return jsonify({'error': 'Symptoms required'}), 400
+            
+        predictions = ml_service.predict_disease(symptoms)
+        return jsonify(predictions), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
