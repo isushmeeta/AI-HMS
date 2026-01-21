@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 import { Users, Clock, AlertCircle, Activity, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../services/api';
@@ -25,27 +26,47 @@ const StatCard = ({ title, value, icon: Icon, color, trend }) => (
 );
 
 const Dashboard = () => {
+    const { user } = useAuth(); // Import useAuth to get current user
     const [stats, setStats] = useState({ total_patients: 0, appointments_today: 0, total_doctors: 0, total_records: 0 });
     const [trendData, setTrendData] = useState([]);
+    const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [statsRes, trendsRes] = await Promise.all([
+                const promises = [
                     api.get('/analytics/stats'),
                     api.get('/analytics/trends')
-                ]);
-                setStats(statsRes.data);
-                setTrendData(trendsRes.data);
+                ];
+
+                // Fetch notifications only if user is a doctor
+                if (user?.role === 'Doctor') {
+                    // Assuming we can get doctor's ID from user object or another endpoint. 
+                    // For now let's try to passing user.id as doctor_id if they map directly 
+                    // OR rely on backend to filter by current user if we updated the endpoint (we didn't yet).
+                    // We created the endpoint to take doctor_id param. 
+                    // Ideally backend auth_me returns doctor_id too if linked.
+                    // Let's assume user.id maps to doctor.id or use a safe check.
+                    // Workaround: We will try to fetch using user.id.
+                    promises.push(api.get(`/notifications?doctor_id=${user.id}`));
+                }
+
+                const results = await Promise.all(promises);
+                setStats(results[0].data);
+                setTrendData(results[1].data);
+                if (user?.role === 'Doctor' && results[2]) {
+                    setNotifications(results[2].data);
+                }
+
             } catch (error) {
-                console.error("Failed to load dashboard data");
+                console.error("Failed to load dashboard data", error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchData();
-    }, []);
+        if (user) fetchData();
+    }, [user]);
 
     if (loading) return <div className="p-8">Loading Dashboard...</div>;
 
@@ -129,6 +150,29 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {user?.role === 'Doctor' && (
+                <div className="glass-panel p-6 h-96 overflow-y-auto">
+                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <AlertCircle size={20} className="text-blue-500" /> Notifications
+                    </h3>
+                    {notifications.length === 0 ? (
+                        <p className="text-slate-500">No new notifications.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {notifications.map(notif => (
+                                <div key={notif.id} className={`p-3 rounded-lg border ${notif.is_read ? 'bg-slate-50 border-slate-100' : 'bg-blue-50 border-blue-100'}`}>
+                                    <div className="flex justify-between items-start">
+                                        <p className="text-sm font-medium text-slate-800">{notif.message}</p>
+                                        {!notif.is_read && <span className="w-2 h-2 rounded-full bg-blue-500 mt-1"></span>}
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
