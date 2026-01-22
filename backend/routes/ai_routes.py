@@ -65,3 +65,19 @@ def check_interactions():
         
     interactions = gemini_service.check_interactions(medicines)
     return jsonify({'interactions': interactions}), 200
+@ai_bp.route('/ai/patient/chat', methods=['POST'])
+def patient_chat():
+    data = request.get_json()
+    message = data.get('message', '')
+    
+    # Simple keyword routing for the "Patient Assistant"
+    if any(k in message.lower() for k in ['prescription', 'medicine', 'meds']):
+        response = gemini_service.explain_prescription(message)
+    elif any(k in message.lower() for k in ['report', 'lab', 'test', 'result']):
+        response = gemini_service.explain_lab_report(message)
+    elif any(k in message.lower() for k in ['symptom', 'pain', 'feel', 'hurt']):
+        response = gemini_service.symptom_pre_check(message)
+    else:
+        response = gemini_service.hospital_faq(message)
+        
+    return jsonify({'response': response}), 200

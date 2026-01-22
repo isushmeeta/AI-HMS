@@ -130,14 +130,21 @@ const MainLayout = () => {
                         </div>
 
                         {/* Profile Section */}
-                        <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
+                        <div
+                            onClick={() => navigate('/profile')}
+                            className="flex items-center gap-3 pl-4 border-l border-slate-200 cursor-pointer hover:opacity-80 transition-opacity"
+                        >
                             <div className="text-right hidden md:block">
                                 <p className="text-sm font-semibold text-slate-700">
-                                    {user ? ((user.role === 'Doctor' ? 'Dr. ' : '') + user.first_name + ' ' + user.last_name) : 'Guest'}
+                                    {user ? (
+                                        (user.first_name && user.last_name)
+                                            ? `${user.role === 'Doctor' ? 'Dr. ' : ''}${user.first_name} ${user.last_name}`
+                                            : user.username
+                                    ) : 'Guest'}
                                 </p>
                                 <p className="text-xs text-slate-500">{user?.role || 'Visitor'}</p>
                             </div>
-                            <div className="w-10 h-10 bg-gradient-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center text-slate-600 border-2 border-white shadow-sm">
+                            <div className="w-10 h-10 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full flex items-center justify-center text-primary border-2 border-white shadow-sm">
                                 <UserIcon size={20} />
                             </div>
                         </div>

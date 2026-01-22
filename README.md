@@ -248,5 +248,39 @@ The **AI-Powered Hospital Management System** illustrates how artificial intelli
 
 ---
 
+## 🤝 Contributing
+
+We welcome contributions! Please follow these steps to set up the project locally.
+
+### 1. Clone the Repository
+```bash
+git clone <repository_url>
+cd AI-HMS
+```
+
+### 2. Backend Setup
+The backend is built with Flask.
+```bash
+cd backend
+python -m venv venv
+# Activate venv:
+# Windows: venv\Scripts\activate
+# Mac/Linux: source venv/bin/activate
+pip install -r requirements.txt
+python app.py
+```
+Backend runs on `http://localhost:5000`.
+
+### 3. Frontend Setup
+The frontend is built with React and Vite.
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Frontend runs on `http://localhost:5173`.
+
+---
+
 ## 👩‍💻 Author
 

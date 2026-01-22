@@ -1,12 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import ReactMarkdown from 'react-markdown';
 import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ChatWidget = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const { user } = useAuth();
     const [messages, setMessages] = useState([
-        { type: 'bot', text: 'Hi! I am your AI Assistant. Ask me about patient records, doctors, or hospital stats.' }
+        {
+            type: 'bot',
+            text: user?.role === 'Patient'
+                ? 'Hi! I am your Patient Assistant. I can help with hospital FAQs, explain your prescriptions, lab reports, or check symptoms.'
+                : 'Hi! I am your AI Assistant. Ask me about patient records, doctors, or hospital stats.'
+        }
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -26,7 +34,8 @@ const ChatWidget = () => {
         setLoading(true);
 
         try {
-            const res = await api.post('/chat', { message: userMsg.text });
+            const endpoint = user?.role === 'Patient' ? '/ai/patient/chat' : '/chat';
+            const res = await api.post(endpoint, { message: userMsg.text });
             setMessages(prev => [...prev, { type: 'bot', text: res.data.response }]);
         } catch (error) {
             setMessages(prev => [...prev, { type: 'bot', text: "Sorry, I'm having trouble connecting to the server." }]);
@@ -59,11 +68,17 @@ const ChatWidget = () => {
                         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
                             {messages.map((msg, idx) => (
                                 <div key={idx} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.type === 'user'
-                                            ? 'bg-primary text-white rounded-br-none'
-                                            : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none shadow-sm'
+                                    <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.type === 'user'
+                                        ? 'bg-primary text-white rounded-br-none'
+                                        : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none shadow-sm'
                                         }`}>
-                                        {msg.text}
+                                        {msg.type === 'user' ? (
+                                            msg.text
+                                        ) : (
+                                            <div className="markdown-content">
+                                                <ReactMarkdown>{msg.text}</ReactMarkdown>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
