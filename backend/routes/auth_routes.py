@@ -97,17 +97,25 @@ def login():
             'role': user.role,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
         }, current_app.config['SECRET_KEY'], algorithm='HS256')
-        
-        response_data = {
-            'token': token,
-            'user': user.to_dict()
-        }
-
+        user_data = user.to_dict()
         if user.role == 'Patient':
             from models.patient import Patient
             patient = Patient.query.filter_by(user_id=user.id).first()
             if patient:
-                response_data['patient_id'] = patient.id
+                user_data['patient_id'] = patient.id
+                user_data['first_name'] = patient.first_name
+                user_data['last_name'] = patient.last_name
+        elif user.role == 'Doctor':
+            from models.doctor import Doctor
+            doctor = Doctor.query.filter_by(user_id=user.id).first() if hasattr(Doctor, 'user_id') else None
+            if doctor:
+                user_data['first_name'] = doctor.name.split(' ')[0]
+                user_data['last_name'] = ' '.join(doctor.name.split(' ')[1:]) if ' ' in doctor.name else ''
+
+        response_data = {
+            'token': token,
+            'user': user_data
+        }
 
         return jsonify(response_data), 200
     
@@ -125,6 +133,22 @@ def get_current_user():
         user = User.query.get(decoded['user_id'])
         if not user:
              return jsonify({'error': 'User not found'}), 404
-        return jsonify(user.to_dict()), 200
+        
+        user_data = user.to_dict()
+        if user.role == 'Patient':
+            from models.patient import Patient
+            patient = Patient.query.filter_by(user_id=user.id).first()
+            if patient:
+                user_data['patient_id'] = patient.id
+                user_data['first_name'] = patient.first_name
+                user_data['last_name'] = patient.last_name
+        elif user.role == 'Doctor':
+            from models.doctor import Doctor
+            doctor = Doctor.query.filter_by(user_id=user.id).first() if hasattr(Doctor, 'user_id') else None
+            if doctor:
+                user_data['first_name'] = doctor.name.split(' ')[0]
+                user_data['last_name'] = ' '.join(doctor.name.split(' ')[1:]) if ' ' in doctor.name else ''
+
+        return jsonify(user_data), 200
     except Exception:
         return jsonify({'error': 'Invalid token'}), 401

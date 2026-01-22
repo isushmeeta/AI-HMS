@@ -27,7 +27,7 @@ const Dashboard = () => {
             return (
                 <div className="space-y-6">
                     <h1 className="text-2xl font-bold text-slate-800">Patient Dashboard</h1>
-                    <p className="text-slate-500">Welcome, {user.username}</p>
+                    <p className="text-slate-500">Welcome, {user.first_name || user.username}</p>
                     <div className="glass-panel p-6">
                         <p>Access your appointments and records from the sidebar.</p>
                     </div>
