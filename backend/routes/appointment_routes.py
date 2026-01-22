@@ -26,21 +26,13 @@ def create_appointment():
         if conflict:
             return jsonify({'error': 'Slot not available'}), 409
 
-        # Generate Serial Number
-        # Count existing appointments for this doctor on this date to determine the next serial number
-        existing_count = Appointment.query.filter_by(
-            doctor_id=doctor_id,
-            date=date_obj
-        ).count()
-        serial_number = existing_count + 1
-
         new_appointment = Appointment(
             patient_id=data['patient_id'],
             doctor_id=doctor_id,
             date=date_obj,
             time=time_obj,
             reason=data.get('reason'),
-            serial_number=serial_number
+            status='Requested'
         )
         db.session.add(new_appointment)
         
@@ -96,5 +88,27 @@ def update_status(id):
     appointment = Appointment.query.get_or_404(id)
     data = request.get_json()
     appointment.status = data['status']
+    db.session.commit()
+    return jsonify(appointment.to_dict()), 200
+
+@appointment_bp.route('/appointments/<int:id>/confirm', methods=['PUT'])
+def confirm_appointment(id):
+    appointment = Appointment.query.get_or_404(id)
+    
+    # Generate Serial Number
+    existing_count = Appointment.query.filter_by(
+        doctor_id=appointment.doctor_id,
+        date=appointment.date,
+        status='Scheduled' # Count only confirmed/scheduled ones
+    ).count()
+    
+    appointment.serial_number = existing_count + 1
+    appointment.status = 'Scheduled'
+    
+    # Create Notification for Patient (Optional but good)
+    from models.notification import Notification
+    # Assuming Notification model has patient_id or we use a generic role field
+    # For now, let's just commit the status change
+    
     db.session.commit()
     return jsonify(appointment.to_dict()), 200
