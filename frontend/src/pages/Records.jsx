@@ -559,7 +559,9 @@ const Records = () => {
                                                 {record.tests && (
                                                     <div className="space-y-2 pt-4 border-t border-slate-50">
                                                         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.12em]">Advices / Tests</span>
-                                                        <p className="text-slate-600 text-[14px] italic font-medium">"{record.tests}"</p>
+                                                        <p className="text-slate-600 text-[14px] italic font-medium">
+                                                            "{record.tests.split('\n').filter(t => t.trim()).join(', ')}"
+                                                        </p>
                                                     </div>
                                                 )}
 
