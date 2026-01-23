@@ -46,6 +46,13 @@ const Profile = () => {
                         contact: res.data.contact || user.mobile || '',
                         gender: res.data.gender || user.gender || ''
                     });
+                } else if (user?.role === 'Receptionist') {
+                    setFormData({
+                        name: user.username,
+                        contact: user.mobile,
+                        email: user.email,
+                        gender: user.gender || ''
+                    });
                 }
             } catch (err) {
                 console.error("Failed to fetch profile data", err);
@@ -87,6 +94,11 @@ const Profile = () => {
                 await api.put(`/patients/${user.patient_id}`, formData);
             } else if (user?.role === 'Doctor') {
                 await api.put(`/doctors/${user.doctor_id}`, formData);
+            } else if (user?.role === 'Receptionist') {
+                await api.put('/auth/profile', {
+                    username: formData.name, // Receptionists use 'name' in formData which maps to 'username' in backend
+                    mobile: formData.contact // Receptionists use 'contact' in formData which maps to 'mobile' in backend
+                });
             }
 
             // Refresh user data in context to update names in header/sidebar
@@ -214,18 +226,20 @@ const Profile = () => {
                                     required
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-600 flex items-center gap-2">
-                                    <Stethoscope size={16} /> Specialization
-                                </label>
-                                <input
-                                    name="specialization"
-                                    value={formData.specialization || ''}
-                                    onChange={handleChange}
-                                    className="input-field"
-                                    required
-                                />
-                            </div>
+                            {user?.role === 'Doctor' && (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-600 flex items-center gap-2">
+                                        <Stethoscope size={16} /> Specialization
+                                    </label>
+                                    <input
+                                        name="specialization"
+                                        value={formData.specialization || ''}
+                                        onChange={handleChange}
+                                        className="input-field"
+                                        required
+                                    />
+                                </div>
+                            )}
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-slate-600 flex items-center gap-2">
                                     <Phone size={16} /> Contact

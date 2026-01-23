@@ -108,11 +108,25 @@ def confirm_appointment(id):
     appointment.serial_number = existing_count + 1
     appointment.status = 'Scheduled'
     
-    # Create Notification for Patient (Optional but good)
+    # Create Notification for Patient
     from models.notification import Notification
-    # Assuming Notification model has patient_id or we use a generic role field
-    # For now, let's just commit the status change
+    try:
+        notification_message = f"Your appointment has been confirmed! Serial No: {appointment.serial_number} for {appointment.date} at {appointment.time}"
+        new_notification = Notification(
+            patient_id=appointment.patient_id,
+            message=notification_message
+        )
+        db.session.add(new_notification)
+    except:
+        pass
     
+    db.session.commit()
+    return jsonify(appointment.to_dict()), 200
+
+@appointment_bp.route('/appointments/<int:id>/cancel', methods=['PUT'])
+def cancel_appointment(id):
+    appointment = Appointment.query.get_or_404(id)
+    appointment.status = 'Cancelled'
     db.session.commit()
     return jsonify(appointment.to_dict()), 200
 

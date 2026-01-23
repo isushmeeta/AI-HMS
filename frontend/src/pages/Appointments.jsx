@@ -99,7 +99,7 @@ const Appointments = () => {
                             : 'Manage schedule and patient queues'}
                     </p>
                 </div>
-                {user?.role !== 'Patient' && (
+                {user?.role !== 'Patient' && user?.role !== 'Receptionist' && (
                     <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
                         <Plus size={20} /> Schedule Appointment
                     </button>
@@ -167,6 +167,24 @@ const Appointments = () => {
                                 className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/5 rounded-lg transition-colors border border-primary/20"
                             >
                                 <RefreshCcw size={14} /> Reschedule
+                            </button>
+                        )}
+                        {user?.role !== 'Patient' && (apt.status === 'Requested' || apt.status === 'Scheduled') && (
+                            <button
+                                onClick={async () => {
+                                    if (window.confirm('Are you sure you want to cancel this appointment?')) {
+                                        try {
+                                            await api.put(`/appointments/${apt.id}/cancel`);
+                                            toast.success('Appointment cancelled');
+                                            fetchAppointments();
+                                        } catch (err) {
+                                            toast.error('Failed to cancel');
+                                        }
+                                    }
+                                }}
+                                className="px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+                            >
+                                Cancel
                             </button>
                         )}
                     </motion.div>

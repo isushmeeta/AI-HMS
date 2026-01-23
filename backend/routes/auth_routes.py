@@ -131,6 +131,31 @@ def login():
     
     return jsonify({'error': 'Invalid credentials'}), 401
 
+@auth_bp.route('/auth/profile', methods=['PUT'])
+def update_profile():
+    data = request.get_json()
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return jsonify({'error': 'Missing token'}), 401
+    
+    try:
+        token = auth_header.split(" ")[1]
+        decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+        user = User.query.get(decoded['user_id'])
+        
+        if 'username' in data:
+            user.username = data['username']
+        if 'mobile' in data:
+            # Basic validation for mobile
+            if not re.match(r'^\+\d{1,4}\d{7,15}$', data['mobile']):
+                return jsonify({'error': 'Mobile number must include country code'}), 400
+            user.mobile = data['mobile']
+        
+        db.session.commit()
+        return jsonify(user.to_dict()), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 401
+
 @auth_bp.route('/auth/me', methods=['GET'])
 def get_current_user():
     auth_header = request.headers.get('Authorization')
