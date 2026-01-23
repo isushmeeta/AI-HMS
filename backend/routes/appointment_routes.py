@@ -96,32 +96,37 @@ def update_status(id):
 
 @appointment_bp.route('/appointments/<int:id>/confirm', methods=['PUT'])
 def confirm_appointment(id):
-    appointment = Appointment.query.get_or_404(id)
-    
-    # Generate Serial Number
-    existing_count = Appointment.query.filter_by(
-        doctor_id=appointment.doctor_id,
-        date=appointment.date,
-        status='Scheduled' # Count only confirmed/scheduled ones
-    ).count()
-    
-    appointment.serial_number = existing_count + 1
-    appointment.status = 'Scheduled'
-    
-    # Create Notification for Patient
-    from models.notification import Notification
     try:
-        notification_message = f"Your appointment has been confirmed! Serial No: {appointment.serial_number} for {appointment.date} at {appointment.time}"
-        new_notification = Notification(
-            patient_id=appointment.patient_id,
-            message=notification_message
-        )
-        db.session.add(new_notification)
-    except:
-        pass
-    
-    db.session.commit()
-    return jsonify(appointment.to_dict()), 200
+        appointment = Appointment.query.get_or_404(id)
+        
+        # Generate Serial Number
+        existing_count = Appointment.query.filter_by(
+            doctor_id=appointment.doctor_id,
+            date=appointment.date,
+            status='Scheduled' # Count only confirmed/scheduled ones
+        ).count()
+        
+        appointment.serial_number = existing_count + 1
+        appointment.status = 'Scheduled'
+        
+        # Create Notification for Patient
+        from models.notification import Notification
+        try:
+            notification_message = f"Your appointment has been confirmed! Serial No: {appointment.serial_number} for {appointment.date} at {appointment.time}"
+            new_notification = Notification(
+                patient_id=appointment.patient_id,
+                doctor_id=appointment.doctor_id, # REQUIRED by DB schema
+                message=notification_message
+            )
+            db.session.add(new_notification)
+        except Exception as e:
+            print(f"Notification failed (suppressed): {e}")
+        
+        db.session.commit()
+        return jsonify({'message': 'Appointment confirmed', 'appointment': appointment.to_dict()}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @appointment_bp.route('/appointments/<int:id>/cancel', methods=['PUT'])
 def cancel_appointment(id):

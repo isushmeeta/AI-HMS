@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Clock, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const DoctorDashboard = ({ user }) => {
     const [stats, setStats] = useState({ appointments_today: 0, total_patients: 0 });
@@ -11,7 +12,7 @@ const DoctorDashboard = ({ user }) => {
         const fetchData = async () => {
             try {
                 const [statsRes, notifRes] = await Promise.all([
-                    api.get('/analytics/stats'),
+                    api.get(`/analytics/stats?doctor_id=${user.doctor_id}`),
                     api.get(`/notifications?doctor_id=${user.id}`)
                 ]);
                 setStats(statsRes.data);
@@ -31,25 +32,45 @@ const DoctorDashboard = ({ user }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <motion.div whileHover={{ y: -5 }} className="glass-card p-6 bg-purple-50 border-purple-100">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <p className="text-purple-600 font-medium">Appointments Today</p>
-                            <h3 className="text-3xl font-bold text-purple-900 mt-1">{stats.appointments_today}</h3>
+                <Link to="/appointments?view=queue" className="block group">
+                    <motion.div
+                        whileHover={{ y: -5 }}
+                        className="glass-card p-6 bg-purple-50 border-purple-100 h-full hover:shadow-md transition-all cursor-pointer"
+                    >
+                        <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                                <p className="text-purple-600 font-medium">Appointments Today</p>
+                                <h3 className="text-3xl font-bold text-purple-900">{stats.appointments_today}</h3>
+                                <p className="text-xs text-purple-400 font-semibold group-hover:text-purple-600 transition-colors pt-2">
+                                    Click to view schedule →
+                                </p>
+                            </div>
+                            <div className="p-3 bg-purple-100 rounded-xl text-purple-600">
+                                <Clock size={24} />
+                            </div>
                         </div>
-                        <Clock className="text-purple-500" size={32} />
-                    </div>
-                </motion.div>
+                    </motion.div>
+                </Link>
 
-                <motion.div whileHover={{ y: -5 }} className="glass-card p-6 bg-blue-50 border-blue-100">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <p className="text-blue-600 font-medium">My Patients</p>
-                            <h3 className="text-3xl font-bold text-blue-900 mt-1">{stats.total_patients}</h3>
+                <Link to="/patients" className="block group">
+                    <motion.div
+                        whileHover={{ y: -5 }}
+                        className="glass-card p-6 bg-blue-50 border-blue-100 h-full hover:shadow-md transition-all cursor-pointer"
+                    >
+                        <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                                <p className="text-blue-600 font-medium">My Patients</p>
+                                <h3 className="text-3xl font-bold text-blue-900">{stats.total_patients}</h3>
+                                <p className="text-xs text-blue-400 font-semibold group-hover:text-blue-600 transition-colors pt-2">
+                                    Click to view details →
+                                </p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-xl text-blue-600">
+                                <AlertCircle size={24} />
+                            </div>
                         </div>
-                        <AlertCircle className="text-blue-500" size={32} />
-                    </div>
-                </motion.div>
+                    </motion.div>
+                </Link>
             </div>
 
             <div className="glass-panel p-6">

@@ -15,12 +15,22 @@ def create_record():
         if isinstance(prescription_val, (list, dict)):
             prescription_val = json.dumps(prescription_val)
 
+        visit_date_val = datetime.utcnow()
+        if data.get('visit_date'):
+            try:
+                visit_date_val = datetime.strptime(data['visit_date'], '%Y-%m-%d')
+            except ValueError:
+                pass
+
         new_record = MedicalRecord(
             patient_id=data['patient_id'],
             doctor_id=data['doctor_id'],
             diagnosis=data['diagnosis'],
             prescription=prescription_val,
-            tests=data.get('tests')
+            tests=data.get('tests'),
+            notes=data.get('notes'),
+            symptoms=data.get('symptoms'),
+            visit_date=visit_date_val
         )
         db.session.add(new_record)
         db.session.commit()

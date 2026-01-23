@@ -20,6 +20,7 @@ const Patients = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editMode, setEditMode] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const [selectedPatientId, setSelectedPatientId] = useState(null);
     const [filterMyPatients, setFilterMyPatients] = useState(user?.role === 'Doctor');
     const [formData, setFormData] = useState({
@@ -41,14 +42,8 @@ const Patients = () => {
         try {
             let url = '/patients';
             if (user?.role === 'Doctor' && filterMyPatients) {
-                // If the user is a doctor and wants to see "My Patients", pass the doctor_id
-                // Assuming user.id corresponds to the doctor_id in appointments for simplicity 
-                // or we need to look up doctor profile. Based on previous auth logic, 
-                // we might need a doctor_id if it differs from user_id. 
-                // Standard app setup: User(id=1, role=Doctor) -> Doctor(id=1, name=..., user_id=1).
-                // Let's assume for this MVP user.id is valid or we'd need /auth/me to return doctor_id.
-                // We'll pass user.id.
-                url = `/patients?doctor_id=${user.id}`;
+                // Use doctor_id from the user object (populated in auth)
+                url = `/patients?doctor_id=${user.doctor_id}`;
             }
             const res = await api.get(url);
             setPatients(res.data);
@@ -147,6 +142,15 @@ const Patients = () => {
         }
     };
 
+    const filteredPatients = patients.filter(p => {
+        const search = searchTerm.toLowerCase();
+        const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
+        const idMatch = p.id.toString().includes(search);
+        const contactMatch = p.contact_number?.toLowerCase().includes(search);
+        const emailMatch = p.email?.toLowerCase().includes(search);
+        return fullName.includes(search) || idMatch || contactMatch || emailMatch;
+    });
+
     if (loading) return <div className="p-8 text-center text-slate-500">Loading patients...</div>;
 
     return (
@@ -194,6 +198,8 @@ const Patients = () => {
                             type="text"
                             placeholder="Search by name, ID, or phone..."
                             className="input-field pl-10"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                 </div>
@@ -216,7 +222,7 @@ const Patients = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
-                                {patients.map((patient, index) => (
+                                {filteredPatients.map((patient, index) => (
                                     <motion.tr
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}

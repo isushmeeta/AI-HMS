@@ -68,16 +68,14 @@ def get_patients():
     
     if doctor_id:
         from models.appointment import Appointment
-        # Join Patient with Appointment to find patients who have an appointment with this doctor
-        patients = Patient.query.join(Appointment, Appointment.patient_id == Patient.id)\
-                                .filter(Appointment.doctor_id == doctor_id).all()
-        # Use set to remove duplicates if a patient has multiple appointments with the same doctor
-        # SQLAlchmey .distinct() can also work but list(set()) is Pythonic safe fallback for simple object lists, 
-        # though objects might not hash correctly without __hash__.
-        # Better to query distinct IDs via SQLAlchemy:
-        patients = Patient.query.join(Appointment, Appointment.patient_id == Patient.id)\
-                                .filter(Appointment.doctor_id == doctor_id)\
-                                .distinct().all()
+        try:
+            d_id = int(doctor_id)
+            # Join Patient with Appointment to find patients who have an appointment with this doctor
+            patients = Patient.query.join(Appointment, Appointment.patient_id == Patient.id)\
+                                    .filter(Appointment.doctor_id == d_id)\
+                                    .distinct().all()
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid doctor_id format'}), 400
     else:
         patients = Patient.query.all()
         

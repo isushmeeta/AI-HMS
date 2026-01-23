@@ -4,13 +4,15 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 
 const Appointments = () => {
     const { user } = useAuth();
+    const [searchParams] = useSearchParams();
     const [appointments, setAppointments] = useState([]);
     const [patients, setPatients] = useState([]);
     const [doctors, setDoctors] = useState([]);
-    const [view, setView] = useState('all'); // all | queue
+    const [view, setView] = useState(searchParams.get('view') || 'all'); // all | queue
     const [showModal, setShowModal] = useState(false);
     const [showRescheduleModal, setShowRescheduleModal] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -38,6 +40,9 @@ const Appointments = () => {
             }
             if (user?.role === 'Patient' && user?.patient_id) {
                 params.append('patient_id', user.patient_id);
+            }
+            if (user?.role === 'Doctor' && user?.doctor_id) {
+                params.append('doctor_id', user.doctor_id);
             }
 
             const queryString = params.toString();

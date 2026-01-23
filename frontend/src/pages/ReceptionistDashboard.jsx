@@ -105,15 +105,35 @@ const ReceptionistDashboard = ({ user }) => {
     };
 
     const handleConfirm = async (id) => {
-        try {
-            await api.put(`/appointments/${id}/confirm`);
+        const confirmPromise = (async () => {
+            const res = await api.put(`/appointments/${id}/confirm`);
             setPendingRequests(prev => prev.filter(a => a.id !== id));
-            // Trigger stats refresh
-            const statsRes = await api.get('/analytics/stats');
-            setStats(statsRes.data);
-        } catch (err) {
-            console.error("Confirmation failed", err);
-        }
+            await fetchStats(); // Use the existing fetchStats function
+            return res.data;
+        })();
+
+        toast.promise(confirmPromise, {
+            loading: 'Confirming appointment...',
+            success: 'Appointment confirmed successfully!',
+            error: (err) => err.response?.data?.error || 'Failed to confirm appointment'
+        });
+    };
+
+    const handleCancel = async (id) => {
+        if (!window.confirm('Are you sure you want to cancel this request?')) return;
+
+        const cancelPromise = (async () => {
+            const res = await api.put(`/appointments/${id}/cancel`);
+            setPendingRequests(prev => prev.filter(a => a.id !== id));
+            await fetchStats();
+            return res.data;
+        })();
+
+        toast.promise(cancelPromise, {
+            loading: 'Cancelling appointment...',
+            success: 'Appointment cancelled.',
+            error: (err) => err.response?.data?.error || 'Failed to cancel appointment'
+        });
     };
 
     return (
@@ -305,16 +325,7 @@ const ReceptionistDashboard = ({ user }) => {
                                         Confirm
                                     </button>
                                     <button
-                                        onClick={async () => {
-                                            if (window.confirm('Cancel this request?')) {
-                                                try {
-                                                    await api.put(`/appointments/${req.id}/cancel`);
-                                                    setPendingRequests(prev => prev.filter(a => a.id !== req.id));
-                                                } catch (err) {
-                                                    console.error("Cancel failed", err);
-                                                }
-                                            }
-                                        }}
+                                        onClick={() => handleCancel(req.id)}
                                         className="bg-white text-red-600 border border-red-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors"
                                     >
                                         Cancel

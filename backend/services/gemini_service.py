@@ -40,19 +40,22 @@ class GeminiService:
             print(f"Gemini Error details: {str(e)}")
             return [{"condition": f"Error: {str(e)}", "confidence": 0}]
 
-    def suggest_prescription(self, diagnosis):
+    def suggest_prescription(self, diagnosis, patient_context=None):
         model = self._get_model()
         if not model:
             return []
 
+        context_str = f" for a {patient_context}" if patient_context else ""
         prompt = f"""
-        Act as a Doctor. Suggest a standard prescription for: "{diagnosis}".
+        Act as a Doctor. Suggest a standard prescription for: "{diagnosis}"{context_str}.
+        Consider the patient's profile (age, gender, etc.) if provided to adjust dosages or avoid contraindications.
         Return ONLY a JSON array of medicines. Each object:
         - name (string)
         - dosage (string)
         - frequency (string, e.g., '1-0-1')
         - duration (string)
-        Example: [{{"name": "Paracetamol", "dosage": "500mg", "frequency": "1-0-1", "duration": "5 days"}}]
+        - notes (string, optional - e.g. 'Take after food')
+        Example: [{{"name": "Paracetamol", "dosage": "500mg", "frequency": "1-0-1", "duration": "5 days", "notes": "Take after food"}}]
         """
         try:
             response = model.generate_content(prompt)
