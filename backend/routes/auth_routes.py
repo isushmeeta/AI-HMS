@@ -71,7 +71,7 @@ def register():
                 first_name=first_name,
                 last_name=last_name,
                 dob=datetime.datetime.strptime('2000-01-01', '%Y-%m-%d').date(),
-                gender='Other',
+                gender=data.get('gender', 'Other'),
                 contact_number=data['mobile'],
                 email=data['email']
             )
@@ -82,6 +82,7 @@ def register():
                 user_id=new_user.id,
                 name=data['username'],
                 specialization=data.get('specialization', 'General Practitioner'),
+                gender=data.get('gender', 'Other'),
                 contact=data['mobile']
             )
             db.session.add(new_doctor)
@@ -111,6 +112,7 @@ def login():
                 user_data['patient_id'] = patient.id
                 user_data['first_name'] = patient.first_name
                 user_data['last_name'] = patient.last_name
+                user_data['gender'] = patient.gender
         elif user.role == 'Doctor':
             from models.doctor import Doctor
             doctor = Doctor.query.filter_by(user_id=user.id).first()
@@ -118,6 +120,7 @@ def login():
                 user_data['doctor_id'] = doctor.id
                 user_data['first_name'] = doctor.name.split(' ')[0]
                 user_data['last_name'] = ' '.join(doctor.name.split(' ')[1:]) if ' ' in doctor.name else ''
+                user_data['gender'] = doctor.gender
 
         response_data = {
             'token': token,
@@ -149,6 +152,7 @@ def get_current_user():
                 user_data['patient_id'] = patient.id
                 user_data['first_name'] = patient.first_name
                 user_data['last_name'] = patient.last_name
+                user_data['gender'] = patient.gender
         elif user.role == 'Doctor':
             from models.doctor import Doctor
             doctor = Doctor.query.filter_by(user_id=user.id).first()
@@ -156,6 +160,7 @@ def get_current_user():
                 user_data['doctor_id'] = doctor.id
                 user_data['first_name'] = doctor.name.split(' ')[0]
                 user_data['last_name'] = ' '.join(doctor.name.split(' ')[1:]) if ' ' in doctor.name else ''
+                user_data['gender'] = doctor.gender
 
         return jsonify(user_data), 200
     except Exception:

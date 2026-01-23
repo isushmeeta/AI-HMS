@@ -72,6 +72,7 @@ def create_appointment():
 def get_appointments():
     date_filter = request.args.get('date')
     doctor_filter = request.args.get('doctor_id')
+    patient_filter = request.args.get('patient_id')
     
     query = Appointment.query
     
@@ -79,6 +80,8 @@ def get_appointments():
         query = query.filter(Appointment.date == datetime.strptime(date_filter, '%Y-%m-%d').date())
     if doctor_filter:
         query = query.filter(Appointment.doctor_id == doctor_filter)
+    if patient_filter:
+        query = query.filter(Appointment.patient_id == patient_filter)
         
     appointments = query.order_by(Appointment.date, Appointment.time).all()
     return jsonify([a.to_dict() for a in appointments]), 200
@@ -112,3 +115,24 @@ def confirm_appointment(id):
     
     db.session.commit()
     return jsonify(appointment.to_dict()), 200
+
+@appointment_bp.route('/appointments/<int:id>/reschedule', methods=['PUT'])
+def reschedule_appointment(id):
+    appointment = Appointment.query.get_or_404(id)
+    data = request.get_json()
+    try:
+        if 'date' in data:
+            appointment.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        if 'time' in data:
+            appointment.time = datetime.strptime(data['time'], '%H:%M').time()
+        
+        # Reset status to Requested if it was Scheduled or Completed? 
+        # Usually rescheduling means it needs a new serial number if it was scheduled.
+        appointment.status = 'Requested'
+        appointment.serial_number = None 
+        
+        db.session.commit()
+        return jsonify(appointment.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

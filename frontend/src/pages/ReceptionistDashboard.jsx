@@ -45,15 +45,6 @@ const ReceptionistDashboard = ({ user }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="glass-panel p-6 flex flex-col items-center text-center hover:bg-slate-50 transition-colors cursor-pointer group">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4 group-hover:scale-110 transition-transform">
-                        <UserPlus size={32} />
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-800">Register Patient</h3>
-                    <p className="text-slate-500 mb-4">Add a new patient to the system</p>
-                    <Link to="/patient-register" className="btn-primary w-full text-center py-2">Go to Registration</Link>
-                </div>
-
-                <div className="glass-panel p-6 flex flex-col items-center text-center hover:bg-slate-50 transition-colors cursor-pointer group">
                     <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 mb-4 group-hover:scale-110 transition-transform">
                         <Calendar size={32} />
                     </div>

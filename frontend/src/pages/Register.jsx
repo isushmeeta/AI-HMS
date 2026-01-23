@@ -15,7 +15,7 @@ const countryCodes = [
 
 const Register = () => {
     const [formData, setFormData] = useState({
-        username: '', email: '', mobileNumber: '', countryCode: '+1', password: '', role: 'Doctor'
+        username: '', email: '', mobileNumber: '', countryCode: '+1', password: '', role: 'Doctor', gender: ''
     });
     const [showPassword, setShowPassword] = useState(false);
     const [passwordStrength, setPasswordStrength] = useState(0);
@@ -170,6 +170,16 @@ const Register = () => {
                             </div>
                         )}
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1 ml-1 text-slate-600">Gender</label>
+                        <select className="input-field" name="gender" value={formData.gender || ''} onChange={handleChange} required>
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-medium mb-1 ml-1 text-slate-600">Role</label>
                         <select className="input-field" name="role" value={formData.role} onChange={handleChange}>

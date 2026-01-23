@@ -45,6 +45,7 @@ def update_doctor(id):
         doctor.name = data.get('name', doctor.name)
         doctor.specialization = data.get('specialization', doctor.specialization)
         doctor.contact = data.get('contact', doctor.contact)
+        doctor.gender = data.get('gender', doctor.gender)
         doctor.availability = data.get('availability', doctor.availability)
         
         db.session.commit()

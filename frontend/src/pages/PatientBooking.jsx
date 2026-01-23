@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../services/api';
 import { Calendar, Clock, User, MessageSquare, ChevronRight } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const PatientBooking = () => {
     const { user } = useAuth();
@@ -49,7 +50,7 @@ const PatientBooking = () => {
         try {
             const response = await api.post('/appointments', formData);
             setBookingResult(response.data);
-            alert(`Appointment Booked! Your Serial Number is: ${response.data.serial_number || 'Pending'}`);
+            toast.success("Appointment request submitted successfully!");
         } catch (err) {
             if (err.response?.status === 409) {
                 setError('Slot not available. Please choose another time.');

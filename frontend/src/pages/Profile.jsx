@@ -36,13 +36,15 @@ const Profile = () => {
                     setFormData({
                         ...res.data,
                         contact_number: res.data.contact_number || user.mobile || '',
+                        gender: res.data.gender || user.gender || '',
                         dob: res.data.dob ? res.data.dob.split('T')[0] : ''
                     });
                 } else if (user?.role === 'Doctor' && user?.doctor_id) {
                     res = await api.get(`/doctors/${user.doctor_id}`);
                     setFormData({
                         ...res.data,
-                        contact: res.data.contact || user.mobile || ''
+                        contact: res.data.contact || user.mobile || '',
+                        gender: res.data.gender || user.gender || ''
                     });
                 }
             } catch (err) {
@@ -180,6 +182,23 @@ const Profile = () => {
                                     required
                                 />
                             </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-600 flex items-center gap-2">
+                                    <User size={16} /> Gender
+                                </label>
+                                <select
+                                    name="gender"
+                                    value={formData.gender || ''}
+                                    onChange={handleChange}
+                                    className="input-field"
+                                    required
+                                >
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
                         </>
                     ) : (
                         <>
@@ -218,6 +237,23 @@ const Profile = () => {
                                     className="input-field"
                                     required
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-600 flex items-center gap-2">
+                                    <User size={16} /> Gender
+                                </label>
+                                <select
+                                    name="gender"
+                                    value={formData.gender || ''}
+                                    onChange={handleChange}
+                                    className="input-field"
+                                    required
+                                >
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
                             </div>
                             <div className="space-y-2 md:col-span-2">
                                 <label className="text-sm font-medium text-slate-600 flex items-center gap-2">

@@ -12,6 +12,7 @@ const Sidebar = () => {
         { icon: Home, label: 'Dashboard', path: '/' },
         // Patient specific
         ...(user?.role === 'Patient' ? [
+            { icon: Calendar, label: 'My Appointments', path: '/appointments' },
             { icon: Calendar, label: 'Book Appointment', path: '/book-appointment' },
             { icon: Activity, label: 'My Records', path: '/records' },
         ] : []),
@@ -28,7 +29,6 @@ const Sidebar = () => {
         ...(user?.role === 'Receptionist' ? [
             { icon: Users, label: 'Patients', path: '/patients' },
             { icon: Calendar, label: 'Appointments', path: '/appointments' },
-            { icon: Activity, label: 'Registration', path: '/patient-register' },
         ] : []),
 
         // Admin specific

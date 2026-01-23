@@ -19,7 +19,8 @@ const PatientRegister = () => {
         password: '',
         mobileNumber: '',
         countryCode: '+1',
-        role: 'Patient'
+        role: 'Patient',
+        gender: ''
     });
     const [showPassword, setShowPassword] = useState(false);
     const [passwordStrength, setPasswordStrength] = useState(0); // 0-4
@@ -144,6 +145,21 @@ const PatientRegister = () => {
                                 className="input-field flex-1"
                             />
                         </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1 ml-1 text-slate-600">Gender</label>
+                        <select
+                            name="gender"
+                            value={formData.gender || ''}
+                            onChange={handleChange}
+                            required
+                            className="input-field"
+                        >
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-1 ml-1 text-slate-600">Password</label>
