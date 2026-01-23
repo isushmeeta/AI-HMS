@@ -20,7 +20,8 @@ def create_record():
             doctor_id=data['doctor_id'],
             diagnosis=data['diagnosis'],
             prescription=prescription_val,
-            tests=data.get('tests')
+            tests=data.get('tests'),
+            notes=data.get('notes')
         )
         db.session.add(new_record)
         db.session.commit()

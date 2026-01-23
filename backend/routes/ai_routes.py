@@ -43,10 +43,24 @@ def predict_disease():
 def suggest_prescription():
     data = request.get_json()
     diagnosis = data.get('diagnosis')
+    patient_id = data.get('patient_id')
+    
     if not diagnosis:
         return jsonify({'error': 'Diagnosis required'}), 400
     
-    prescriptions = gemini_service.suggest_prescription(diagnosis)
+    patient_context = None
+    if patient_id:
+        from models.patient import Patient
+        patient = Patient.query.get(patient_id)
+        if patient:
+            # Calculate age (simplified)
+            from datetime import date
+            age = date.today().year - patient.dob.year if patient.dob else "unknown"
+            patient_context = f"{age} year old {patient.gender} patient"
+            if patient.blood_group:
+                patient_context += f" with blood group {patient.blood_group}"
+
+    prescriptions = gemini_service.suggest_prescription(diagnosis, patient_context)
     return jsonify(prescriptions), 200
 
 @ai_bp.route('/generate/notes', methods=['POST'])

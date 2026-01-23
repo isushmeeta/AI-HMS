@@ -4,9 +4,11 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 const Records = () => {
     const { user } = useAuth();
+    const location = useLocation();
     const [records, setRecords] = useState([]);
     const [patients, setPatients] = useState([]);
     const [doctors, setDoctors] = useState([]);
@@ -15,10 +17,10 @@ const Records = () => {
 
     // Form States
     const [formData, setFormData] = useState({
-        patient_id: '', doctor_id: '', diagnosis: '', tests: ''
+        patient_id: '', doctor_id: '', diagnosis: '', tests: '', notes: '', symptoms: ''
     });
     const [medicines, setMedicines] = useState([]);
-    const [newMed, setNewMed] = useState({ name: '', dosage: '', frequency: '1-0-1', duration: '5 days' });
+    const [newMed, setNewMed] = useState({ name: '', dosage: '', frequency: '1-0-1', duration: '5 days', notes: '' });
 
     useEffect(() => {
         fetchRecords();
@@ -27,6 +29,25 @@ const Records = () => {
             fetchDoctors();
         }
     }, [showModal, user]);
+
+    useEffect(() => {
+        if (location.state?.autoFill) {
+            const { autoFill } = location.state;
+            setFormData(prev => ({
+                ...prev,
+                patient_id: autoFill.patient_id || '',
+                diagnosis: autoFill.diagnosis || '',
+                symptoms: autoFill.symptoms || '',
+                doctor_id: user.doctor_id || ''
+            }));
+            if (autoFill.prescription) {
+                setMedicines(autoFill.prescription);
+            }
+            setShowModal(true);
+            // Clear state after reading to prevent modal reopening on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state, user]);
 
     const fetchRecords = async () => {
         try {
@@ -80,7 +101,26 @@ const Records = () => {
             return;
         }
         setMedicines([...medicines, newMed]);
-        setNewMed({ name: '', dosage: '', frequency: '1-0-1', duration: '5 days' });
+        setNewMed({ name: '', dosage: '', frequency: '1-0-1', duration: '5 days', notes: '' });
+    };
+
+    const handleAiDiagnose = async () => {
+        if (!formData.symptoms) {
+            toast.error('Please enter symptoms first');
+            return;
+        }
+        const toastId = toast.loading('AI is analyzing symptoms...');
+        try {
+            const res = await api.post('/predict/disease', { symptoms: formData.symptoms });
+            if (res.data && res.data.length > 0) {
+                setFormData({ ...formData, diagnosis: res.data[0].condition });
+                toast.success('Diagnosis suggested!');
+            }
+        } catch (err) {
+            toast.error('AI Diagnosis failed');
+        } finally {
+            toast.dismiss(toastId);
+        }
     };
 
     const removeMedicine = (index) => {
@@ -96,15 +136,38 @@ const Records = () => {
         }
         const toastId = toast.loading('AI is generating a prescription...');
         try {
-            const res = await api.post('/predict/prescription', { diagnosis: formData.diagnosis });
+            const res = await api.post('/predict/prescription', {
+                diagnosis: formData.diagnosis,
+                patient_id: formData.patient_id
+            });
             if (res.data && res.data.length > 0) {
                 setMedicines([...medicines, ...res.data]);
-                toast.success('Prescription suggested!');
+                toast.success('Profile-aware prescription suggested!');
             } else {
                 toast.error('No suggestions found');
             }
         } catch (err) {
             toast.error('Failed to get AI suggestions');
+        } finally {
+            toast.dismiss(toastId);
+        }
+    };
+
+    const handleAiSuggestNotes = async () => {
+        if (!formData.diagnosis) {
+            toast.error('Please enter a diagnosis or use AI diagnose first');
+            return;
+        }
+        const toastId = toast.loading('AI is generating treatment notes...');
+        try {
+            const context = `Diagnosis: ${formData.diagnosis}. Prescription: ${JSON.stringify(medicines)}. Symptoms: ${formData.symptoms}`;
+            const res = await api.post('/generate/notes', { data: context });
+            if (res.data && res.data.notes) {
+                setFormData({ ...formData, notes: res.data.notes });
+                toast.success('Notes generated!');
+            }
+        } catch (err) {
+            toast.error('Failed to generate notes');
         } finally {
             toast.dismiss(toastId);
         }
@@ -120,7 +183,7 @@ const Records = () => {
             toast.success('Medical Record saved');
             setShowModal(false);
             setMedicines([]);
-            setFormData({ patient_id: '', doctor_id: '', diagnosis: '', tests: '' });
+            setFormData({ patient_id: '', doctor_id: '', diagnosis: '', tests: '', notes: '', symptoms: '' });
             fetchRecords();
         } catch (err) {
             toast.error('Failed to save record');
@@ -206,12 +269,21 @@ const Records = () => {
                                         {Array.isArray(record.prescription) ? (
                                             <ul className="text-sm text-slate-700 space-y-1">
                                                 {record.prescription.map((med, i) => (
-                                                    <li key={i}>• <b>{med.name}</b> - {med.dosage} ({med.frequency})</li>
+                                                    <li key={i}>
+                                                        • <b>{med.name}</b> - {med.dosage} ({med.frequency})
+                                                        {med.notes && <span className="block text-xs text-slate-500 italic ml-2">Note: {med.notes}</span>}
+                                                    </li>
                                                 ))}
                                             </ul>
                                         ) : (
                                             <p className="text-slate-700">{typeof record.prescription === 'string' ? record.prescription : 'No prescription'}</p>
                                         )}
+                                    </div>
+                                )}
+                                {record.notes && (
+                                    <div className="md:col-span-2 mt-2 pt-2 border-t border-slate-50">
+                                        <span className="text-xs font-bold text-slate-400 uppercase">Treatment Notes & Advice</span>
+                                        <p className="text-slate-700 mt-1 whitespace-pre-line">{record.notes}</p>
                                     </div>
                                 )}
                                 {record.type === 'appointment' && (
@@ -253,8 +325,27 @@ const Records = () => {
                                 </div>
                             </div>
                             <div>
+                                <label className="block text-sm font-medium mb-1">Symptoms (for AI Analysis)</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        className="input-field flex-1"
+                                        placeholder="E.g. Fever, cough..."
+                                        value={formData.symptoms}
+                                        onChange={e => setFormData({ ...formData, symptoms: e.target.value })}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleAiDiagnose}
+                                        className="btn-ghost text-emerald-600 border-emerald-100 bg-emerald-50 px-3 hover:bg-emerald-100"
+                                    >
+                                        <Sparkles size={16} /> Diagnose
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
                                 <label className="block text-sm font-medium mb-1">Diagnosis</label>
-                                <textarea rows="2" className="input-field" onChange={e => setFormData({ ...formData, diagnosis: e.target.value })} required />
+                                <textarea rows="2" className="input-field" value={formData.diagnosis} onChange={e => setFormData({ ...formData, diagnosis: e.target.value })} required />
                             </div>
 
                             {/* Structured Prescription */}
@@ -269,9 +360,9 @@ const Records = () => {
                                         <Sparkles size={12} /> AI Suggest
                                     </button>
                                 </div>
-                                <div className="grid grid-cols-4 gap-2 mb-2">
+                                <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
                                     <input placeholder="Medicine Name" className="input-field text-sm" value={newMed.name} onChange={e => setNewMed({ ...newMed, name: e.target.value })} />
-                                    <input placeholder="Dosage (e.g. 500mg)" className="input-field text-sm" value={newMed.dosage} onChange={e => setNewMed({ ...newMed, dosage: e.target.value })} />
+                                    <input placeholder="Dosage" className="input-field text-sm" value={newMed.dosage} onChange={e => setNewMed({ ...newMed, dosage: e.target.value })} />
                                     <select className="input-field text-sm" value={newMed.frequency} onChange={e => setNewMed({ ...newMed, frequency: e.target.value })}>
                                         <option>1-0-1</option>
                                         <option>1-1-1</option>
@@ -279,10 +370,11 @@ const Records = () => {
                                         <option>0-0-1</option>
                                         <option>SOS</option>
                                     </select>
-                                    <div className="flex gap-2">
-                                        <input placeholder="Duration" className="input-field text-sm flex-1" value={newMed.duration} onChange={e => setNewMed({ ...newMed, duration: e.target.value })} />
-                                        <button type="button" onClick={handleAddMedicine} className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"><Plus size={18} /></button>
-                                    </div>
+                                    <input placeholder="Duration" className="input-field text-sm" value={newMed.duration} onChange={e => setNewMed({ ...newMed, duration: e.target.value })} />
+                                    <button type="button" onClick={handleAddMedicine} className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 flex justify-center items-center"><Plus size={18} /></button>
+                                </div>
+                                <div className="mb-2">
+                                    <input placeholder="Special instructions for this medicine (optional)" className="input-field text-xs bg-white/50" value={newMed.notes} onChange={e => setNewMed({ ...newMed, notes: e.target.value })} />
                                 </div>
 
                                 <div className="space-y-2 mt-3">
@@ -301,9 +393,24 @@ const Records = () => {
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Test Recommendations</label>
-                                <textarea rows="2" className="input-field" onChange={e => setFormData({ ...formData, tests: e.target.value })} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Test Recommendations</label>
+                                    <textarea rows="2" className="input-field text-sm" value={formData.tests} onChange={e => setFormData({ ...formData, tests: e.target.value })} />
+                                </div>
+                                <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="block text-sm font-medium">Doctor's Notes / Treatment Plan</label>
+                                        <button
+                                            type="button"
+                                            onClick={handleAiSuggestNotes}
+                                            className="text-[10px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded flex items-center gap-1 hover:bg-emerald-200 transition-colors"
+                                        >
+                                            <Sparkles size={10} /> Suggest Notes
+                                        </button>
+                                    </div>
+                                    <textarea rows="2" className="input-field text-sm" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
+                                </div>
                             </div>
 
                             <div className="flex justify-end gap-2 pt-4">

@@ -10,6 +10,7 @@ class MedicalRecord(db.Model):
     diagnosis = db.Column(db.Text, nullable=False)
     prescription = db.Column(db.Text, nullable=True)
     tests = db.Column(db.Text, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
     visit_date = db.Column(db.DateTime, default=datetime.utcnow)
 
     patient = db.relationship('Patient', backref='medical_records')
@@ -34,5 +35,6 @@ class MedicalRecord(db.Model):
             'diagnosis': self.diagnosis,
             'prescription': prescription_data,
             'tests': self.tests,
+            'notes': self.notes,
             'visit_date': self.visit_date.isoformat()
         }
