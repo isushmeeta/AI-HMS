@@ -58,3 +58,34 @@ def delete_record(id):
         return jsonify({'message': 'Record deleted'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@record_bp.route('/medical_records/<int:id>', methods=['PUT'])
+def update_record(id):
+    import json
+    record = MedicalRecord.query.get_or_404(id)
+    data = request.get_json()
+    try:
+        if 'diagnosis' in data:
+            record.diagnosis = data['diagnosis']
+        if 'prescription' in data:
+            prescription_val = data['prescription']
+            if isinstance(prescription_val, (list, dict)):
+                prescription_val = json.dumps(prescription_val)
+            record.prescription = prescription_val
+        if 'tests' in data:
+            record.tests = data.get('tests')
+        if 'notes' in data:
+            record.notes = data.get('notes')
+        if 'symptoms' in data:
+            record.symptoms = data.get('symptoms')
+        if 'visit_date' in data:
+            try:
+                record.visit_date = datetime.strptime(data['visit_date'], '%Y-%m-%d')
+            except ValueError:
+                pass
+        
+        db.session.commit()
+        return jsonify(record.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

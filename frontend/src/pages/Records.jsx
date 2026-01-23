@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, FileText, Search, User, Stethoscope, Trash, Sparkles } from 'lucide-react';
+import { Plus, FileText, Search, User, Stethoscope, Trash, Sparkles, Pencil } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import InlineConfirm from '../components/InlineConfirm';
 import { useAuth } from '../context/AuthContext';
 
 const Records = () => {
@@ -14,6 +15,10 @@ const Records = () => {
     const [doctors, setDoctors] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedPatientId, setSelectedPatientId] = useState(null);
+    const [patientSearchTerm, setPatientSearchTerm] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingId, setEditingId] = useState(null);
     const [autoFillProcessed, setAutoFillProcessed] = useState(false);
 
     // Form States
@@ -33,16 +38,15 @@ const Records = () => {
 
     useEffect(() => {
         fetchRecords();
-        if (showModal && user?.role !== 'Patient') {
+        if (user?.role !== 'Patient') {
             fetchPatients();
         }
+    }, [user]);
 
+    useEffect(() => {
         // Handle auto-fill from AI Insights
         if (location.state?.autoFill && !autoFillProcessed) {
             const { autoFill } = location.state;
-
-            // Find patient to get age/gender if possible
-            // Note: Patients might not be loaded yet, so we'll check in fetchPatients too
 
             setFormData(prev => ({
                 ...prev,
@@ -169,7 +173,11 @@ const Records = () => {
                 toast.success('Diagnosis suggested!');
             }
         } catch (err) {
-            toast.error('AI Diagnosis failed');
+            if (err.response?.status === 429) {
+                toast.error('AI Quota exceeded. Please try again later or upgrade your plan.');
+            } else {
+                toast.error('AI Diagnosis failed');
+            }
         } finally {
             toast.dismiss(toastId);
         }
@@ -199,7 +207,11 @@ const Records = () => {
                 toast.error('No suggestions found');
             }
         } catch (err) {
-            toast.error('Failed to get AI suggestions');
+            if (err.response?.status === 429) {
+                toast.error('AI Quota exceeded. Using local suggestions instead.');
+            } else {
+                toast.error('Failed to get AI suggestions');
+            }
         } finally {
             toast.dismiss(toastId);
         }
@@ -219,7 +231,11 @@ const Records = () => {
                 toast.success('Notes generated!');
             }
         } catch (err) {
-            toast.error('Failed to generate notes');
+            if (err.response?.status === 429) {
+                toast.error('AI Quota exceeded. Please write notes manually.');
+            } else {
+                toast.error('Failed to generate notes');
+            }
         } finally {
             toast.dismiss(toastId);
         }
@@ -228,13 +244,23 @@ const Records = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/medical_records', {
-                ...formData,
-                prescription: medicines
-            });
-            toast.success('Medical Record saved');
+            if (isEditing) {
+                await api.put(`/medical_records/${editingId}`, {
+                    ...formData,
+                    prescription: medicines
+                });
+                toast.success('Medical Record updated');
+            } else {
+                await api.post('/medical_records', {
+                    ...formData,
+                    prescription: medicines
+                });
+                toast.success('Medical Record saved');
+            }
             setShowModal(false);
             setMedicines([]);
+            setIsEditing(false);
+            setEditingId(null);
             setFormData({
                 patient_id: '',
                 doctor_id: '',
@@ -248,138 +274,330 @@ const Records = () => {
             });
             fetchRecords();
         } catch (err) {
-            toast.error('Failed to save record');
+            toast.error(`Failed to ${isEditing ? 'update' : 'save'} record`);
         }
     };
 
-    const filteredRecords = records.filter(r =>
-        r.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.diagnosis.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const getRecordCount = (patientId) => {
+        return records.filter(r => r.patient_id === patientId).length;
+    };
+
+    const handleDeleteRecord = async (id, type) => {
+        try {
+            if (type === 'appointment') {
+                await api.delete(`/appointments/${id}`);
+            } else {
+                await api.delete(`/medical_records/${id}`);
+            }
+            toast.success('Record deleted');
+            fetchRecords();
+        } catch (err) {
+            toast.error('Failed to delete record');
+        }
+    };
+
+    const handleEditRecord = (record) => {
+        if (record.type === 'appointment') return;
+
+        setFormData({
+            patient_id: record.patient_id,
+            doctor_id: record.doctor_id,
+            diagnosis: record.diagnosis,
+            tests: record.tests || '',
+            notes: record.notes || '',
+            symptoms: record.symptoms || '',
+            visit_date: record.visit_date ? record.visit_date.split('T')[0] : new Date().toISOString().split('T')[0],
+            patient_age: record.patient_age,
+            patient_gender: record.patient_gender
+        });
+        setMedicines(Array.isArray(record.prescription) ? record.prescription : []);
+        setIsEditing(true);
+        setEditingId(record.id);
+        setShowModal(true);
+    };
+
+    const filteredRecords = records.filter(r => {
+        const matchesSearch = r.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            r.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesPatient = selectedPatientId ? r.patient_id === selectedPatientId : true;
+        return matchesSearch && matchesPatient;
+    });
+
+    const searchedPatients = patients.filter(p =>
+        `${p.first_name} ${p.last_name}`.toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
+        p.id.toString().includes(patientSearchTerm)
     );
 
+    const selectedPatient = patients.find(p => p.id === selectedPatientId);
+
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-800">
-                        {user?.role === 'Patient' ? 'My Medical History' : 'Medical Records'}
-                    </h1>
-                    <p className="text-slate-500">
-                        {user?.role === 'Patient' ? 'Past diagnoses, prescriptions, and visit history' : 'Patient diagnoses, prescriptions, and history'}
-                    </p>
+        <>
+            <div className="space-y-6 max-w-5xl mx-auto">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-800">
+                            {user?.role === 'Patient' ? 'My Medical History' : 'Medical Records'}
+                        </h1>
+                        <p className="text-slate-500">
+                            {user?.role === 'Patient' ? 'Past diagnoses, prescriptions, and visit history' : 'Manage patient records and history'}
+                        </p>
+                    </div>
+                    {user?.role !== 'Patient' && (
+                        <button onClick={() => {
+                            setIsEditing(false);
+                            setEditingId(null);
+                            setMedicines([]);
+                            setFormData({
+                                patient_id: selectedPatientId || '',
+                                doctor_id: user?.doctor_id || '',
+                                diagnosis: '',
+                                tests: '',
+                                notes: '',
+                                symptoms: '',
+                                visit_date: new Date().toISOString().split('T')[0],
+                                patient_age: selectedPatient ? calculateAge(selectedPatient.dob) : '',
+                                patient_gender: selectedPatient ? selectedPatient.gender : ''
+                            });
+                            setShowModal(true);
+                        }} className="btn-primary flex items-center gap-2">
+                            <Plus size={20} /> Add Record
+                        </button>
+                    )}
                 </div>
-                {user?.role !== 'Patient' && (
-                    <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
-                        <Plus size={20} /> Add Record
-                    </button>
+
+                {/* Patient Selection Search (Flat style) */}
+                {user?.role !== 'Patient' && !selectedPatientId && (
+                    <div className="glass-panel p-6">
+                        <div className="flex flex-col gap-4">
+                            <label className="text-sm font-bold text-slate-400 uppercase">Find a patient to view history</label>
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Start typing patient name or ID..."
+                                    className="input-field pl-12 py-3"
+                                    value={patientSearchTerm}
+                                    onChange={e => setPatientSearchTerm(e.target.value)}
+                                />
+                            </div>
+
+                            {patientSearchTerm && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 max-h-80 overflow-y-auto custom-scrollbar p-1">
+                                    {searchedPatients.length > 0 ? (
+                                        searchedPatients.map(p => (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => {
+                                                    setSelectedPatientId(p.id);
+                                                    setPatientSearchTerm('');
+                                                }}
+                                                className="flex justify-between items-center p-4 rounded-xl border border-slate-100 bg-white hover:border-primary hover:shadow-sm transition-all text-left group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                                                        {p.first_name[0]}{p.last_name[0]}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-slate-700">{p.first_name} {p.last_name}</div>
+                                                        <div className="text-[10px] text-slate-400">UID: {p.id} • {p.gender}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded-md group-hover:bg-primary group-hover:text-white transition-colors">
+                                                    {getRecordCount(p.id)} Records
+                                                </div>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="col-span-full p-4 text-center text-slate-400 italic">No patients found</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Selected Patient Info & Records List */}
+                {(selectedPatientId || user?.role === 'Patient') && (
+                    <div className="space-y-4">
+                        {user?.role !== 'Patient' && (
+                            <div className="flex items-center justify-between bg-white border border-slate-100 p-4 rounded-xl">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <User size={20} className="text-primary" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800">{selectedPatient?.first_name} {selectedPatient?.last_name}</h3>
+                                        <p className="text-xs text-slate-500">{selectedPatient?.gender} • {calculateAge(selectedPatient?.dob)} Years</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedPatientId(null)}
+                                    className="text-xs font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-all flex items-center gap-1"
+                                >
+                                    <Search size={14} /> Change Patient
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                            <input
+                                type="text"
+                                placeholder="Filter diagnostic history..."
+                                className="input-field pl-12"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-4">
+                            {filteredRecords.length === 0 ? (
+                                <div className="glass-panel p-12 text-center">
+                                    <FileText size={48} className="mx-auto text-slate-200 mb-4" />
+                                    <h3 className="text-lg font-medium text-slate-400">No records found</h3>
+                                </div>
+                            ) : (
+                                filteredRecords.map((record, index) => (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        key={record.id + (record.type || 'record')}
+                                        className="bg-white border border-slate-100 rounded-xl p-8 hover:shadow-lg transition-all group relative overflow-hidden"
+                                    >
+                                        {/* Action buttons at top right matching photo style */}
+                                        <div className="absolute top-8 right-8 flex gap-2 z-20">
+                                            {user?.role !== 'Patient' && record.type !== 'appointment' && (
+                                                <button
+                                                    onClick={() => handleEditRecord(record)}
+                                                    className="p-2.5 bg-[#EFF6FF] text-[#2563EB] hover:bg-blue-100 rounded-xl transition-all shadow-sm border border-blue-50"
+                                                    title="Edit Record"
+                                                >
+                                                    <Pencil size={18} strokeWidth={2.5} />
+                                                </button>
+                                            )}
+                                            {user?.role !== 'Patient' && (
+                                                <InlineConfirm
+                                                    onConfirm={() => handleDeleteRecord(record.id, record.type)}
+                                                    message="Delete this record?"
+                                                    confirmText="Delete"
+                                                >
+                                                    <button
+                                                        className="p-2.5 bg-[#FFF1F2] text-[#E11D48] hover:bg-red-100 rounded-xl transition-all shadow-sm border border-red-50"
+                                                        title="Delete Record"
+                                                    >
+                                                        <Trash size={18} strokeWidth={2.5} />
+                                                    </button>
+                                                </InlineConfirm>
+                                            )}
+                                        </div>
+
+                                        {/* Header area matching photo */}
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <User size={22} className="text-[#0D9488]" />
+                                                    <h3 className="text-xl font-bold text-[#1E293B] tracking-tight">{record.patient_name}</h3>
+                                                    <span className="ml-2 bg-[#E0E7FF] text-[#4F46E5] text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                                        {record.type === 'appointment' ? 'Appointment Visit' : 'Medical Record'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-[13.5px] text-slate-400 font-medium ml-[30px]">
+                                                    Dr. {record.doctor_name} • {new Date(record.visit_date || record.date).toLocaleDateString()}
+                                                </p>
+
+                                                <div className="flex gap-2 mt-2 ml-[30px]">
+                                                    <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded text-[10px] font-bold border border-slate-100">{record.patient_gender}</span>
+                                                    <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded text-[10px] font-bold border border-slate-100">{record.patient_age} Years</span>
+                                                </div>
+                                            </div>
+
+                                        </div>
+
+                                        {/* Body layout matching photo (Prescription Left, Symptoms Right) */}
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 ml-[30px]">
+                                            {/* LEFT SIDE: Diagnosis & Prescription */}
+                                            <div className="md:col-span-7 space-y-8">
+                                                {/* Diagnosis Section */}
+                                                <div className="space-y-1.5">
+                                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.12em]">Diagnosis</span>
+                                                    <p className="text-[#1E293B] font-bold text-[17px] leading-tight">{record.diagnosis}</p>
+                                                </div>
+
+                                                {/* Prescription Section */}
+                                                {record.type === 'record' && (
+                                                    <div className="space-y-4">
+                                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.12em]">Prescription</span>
+                                                        {Array.isArray(record.prescription) && record.prescription.length > 0 ? (
+                                                            <ul className="space-y-0.5">
+                                                                {record.prescription.map((med, i) => (
+                                                                    <li key={i} className="pb-2">
+                                                                        <div className="flex items-start gap-2">
+                                                                            <span className="text-slate-800 font-bold mt-2 inline-block w-1.5 h-1.5 bg-slate-800 rounded-full flex-shrink-0"></span>
+                                                                            <div>
+                                                                                <p className="text-[14.5px] text-[#1E293B] leading-snug">
+                                                                                    <span className="font-bold">{med.name}</span> - {med.dosage} ({med.frequency})
+                                                                                </p>
+                                                                                {med.notes && (
+                                                                                    <p className="text-[13.5px] text-slate-400 italic mt-0.5 leading-snug">
+                                                                                        Note: {med.notes}
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        ) : (
+                                                            <p className="text-slate-700 text-sm">{typeof record.prescription === 'string' ? record.prescription : 'No prescription provided'}</p>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Advices/Tests */}
+                                                {record.tests && (
+                                                    <div className="space-y-2 pt-4 border-t border-slate-50">
+                                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.12em]">Advices / Tests</span>
+                                                        <p className="text-slate-600 text-[14px] italic font-medium">"{record.tests}"</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Notes */}
+                                                {record.notes && (
+                                                    <div className="space-y-2">
+                                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.12em]">Additional Notes</span>
+                                                        <p className="text-slate-600 text-[14px] leading-relaxed">{record.notes}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* RIGHT SIDE: Symptoms */}
+                                            <div className="md:col-span-5 space-y-4">
+                                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.12em]">Symptoms</span>
+                                                <div className="space-y-1.5 mt-0.5">
+                                                    {record.symptoms ? record.symptoms.split('\n').filter(s => s.trim()).map((sym, si) => (
+                                                        <p key={si} className="text-[#64748B] text-[15px] leading-snug tracking-tight">
+                                                            {sym.replace(/^[•\-\*]\s*/, '')}
+                                                        </p>
+                                                    )) : <p className="text-slate-400 italic text-sm">No symptoms noted</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))
+                            )}
+                        </div>
+                    </div>
                 )}
             </div>
 
-            <div className="glass-panel p-6">
-                <div className="flex items-center gap-4 mb-6">
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                        <input
-                            type="text"
-                            placeholder={user?.role === 'Patient' ? "Search my history..." : "Search by patient or diagnosis..."}
-                            className="input-field pl-10"
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-4">
-                    {records.map((record, index) => (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            key={record.id + (record.type || 'record')}
-                            className="bg-white/50 border border-slate-100 rounded-xl p-6 hover:shadow-md transition-all"
-                        >
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                            <User size={20} className="text-primary" /> {record.patient_name}
-                                        </h3>
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${record.type === 'appointment' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'
-                                            }`}>
-                                            {record.type === 'appointment' ? 'Visit' : 'Medical Record'}
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-slate-500 mt-1">
-                                        Dr. {record.doctor_name} • {new Date(record.visit_date || record.date).toLocaleDateString()}
-                                    </p>
-                                    <div className="flex gap-3 mt-2">
-                                        <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium">
-                                            {record.patient_gender}
-                                        </span>
-                                        <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium">
-                                            {record.patient_age} Years
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className={`p-2 rounded-lg ${record.type === 'appointment' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
-                                    {record.type === 'appointment' ? <Stethoscope size={20} /> : <FileText size={20} />}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1">
-                                    <span className="text-xs font-bold text-slate-400 uppercase">
-                                        {record.type === 'appointment' ? 'Reason' : 'Diagnosis'}
-                                    </span>
-                                    <p className="text-slate-700 font-medium">{record.diagnosis}</p>
-                                </div>
-                                {record.symptoms && (
-                                    <div className="space-y-1">
-                                        <span className="text-xs font-bold text-slate-400 uppercase">Symptoms</span>
-                                        <p className="text-slate-700 text-sm whitespace-pre-line">{record.symptoms}</p>
-                                    </div>
-                                )}
-                                {record.type === 'record' && (
-                                    <div className="space-y-1">
-                                        <span className="text-xs font-bold text-slate-400 uppercase">Prescription</span>
-                                        {Array.isArray(record.prescription) ? (
-                                            <ul className="text-sm text-slate-700 space-y-1">
-                                                {record.prescription.map((med, i) => (
-                                                    <li key={i}>
-                                                        • <b>{med.name}</b> - {med.dosage} ({med.frequency})
-                                                        {med.notes && <span className="block text-xs text-slate-500 italic ml-2">Note: {med.notes}</span>}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <p className="text-slate-700">{typeof record.prescription === 'string' ? record.prescription : 'No prescription'}</p>
-                                        )}
-                                    </div>
-                                )}
-                                {record.notes && (
-                                    <div className="md:col-span-2 mt-2 pt-2 border-t border-slate-50">
-                                        <span className="text-xs font-bold text-slate-400 uppercase">Treatment Notes & Advice</span>
-                                        <p className="text-slate-700 mt-1 whitespace-pre-line">{record.notes}</p>
-                                    </div>
-                                )}
-                                {record.type === 'appointment' && (
-                                    <div className="space-y-1">
-                                        <span className="text-xs font-bold text-slate-400 uppercase">Status</span>
-                                        <p className="text-slate-700 font-medium capitalize">{record.status}</p>
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-            </div>
-
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto relative">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold flex items-center gap-2">
-                                <Stethoscope className="text-primary" /> New Medical Record
+                                <Stethoscope className="text-primary" /> {isEditing ? 'Edit Medical Record' : 'New Medical Record'}
                             </h3>
                             <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">×</button>
                         </div>
@@ -525,13 +743,13 @@ const Records = () => {
 
                             <div className="flex justify-end gap-2 pt-4">
                                 <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">Cancel</button>
-                                <button type="submit" className="btn-primary">Save Record</button>
+                                <button type="submit" className="btn-primary">{isEditing ? 'Update Record' : 'Save Record'}</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 };
 

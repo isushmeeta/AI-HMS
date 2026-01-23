@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Calendar, Clock, User, Stethoscope, RefreshCcw } from 'lucide-react';
+import { Plus, Calendar, Clock, User, Stethoscope, RefreshCcw, Trash } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
+import InlineConfirm from '../components/InlineConfirm';
 
 const Appointments = () => {
     const { user } = useAuth();
@@ -91,6 +92,16 @@ const Appointments = () => {
         }
     };
 
+    const handleDeleteAppointment = async (id) => {
+        try {
+            await api.delete(`/appointments/${id}`);
+            toast.success('Appointment deleted');
+            fetchAppointments();
+        } catch (err) {
+            toast.error('Failed to delete appointment');
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -153,31 +164,46 @@ const Appointments = () => {
                                 </div>
                             </div>
                         </div>
-                        <div>
-                            <span className={`px-3 py-1 text-xs font-bold rounded-full ${apt.status === 'Scheduled' ? 'bg-blue-100 text-blue-700' :
-                                apt.status === 'Requested' ? 'bg-amber-100 text-amber-700' :
-                                    apt.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                        'bg-red-100 text-red-700'
-                                }`}>
-                                {apt.status}
-                            </span>
-                        </div>
-                        {user?.role === 'Patient' && apt.status === 'Requested' && (
-                            <button
-                                onClick={() => {
-                                    setSelectedAppointment(apt);
-                                    setRescheduleData({ date: apt.date, time: apt.time });
-                                    setShowRescheduleModal(true);
-                                }}
-                                className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/5 rounded-lg transition-colors border border-primary/20"
-                            >
-                                <RefreshCcw size={14} /> Reschedule
-                            </button>
-                        )}
-                        {user?.role !== 'Patient' && (apt.status === 'Requested' || apt.status === 'Scheduled') && (
-                            <button
-                                onClick={async () => {
-                                    if (window.confirm('Are you sure you want to cancel this appointment?')) {
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <span className={`px-3 py-1 text-xs font-bold rounded-full ${apt.status === 'Scheduled' ? 'bg-blue-100 text-blue-700' :
+                                    apt.status === 'Requested' ? 'bg-amber-100 text-amber-700' :
+                                        apt.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                                            'bg-red-100 text-red-700'
+                                    }`}>
+                                    {apt.status}
+                                </span>
+                                {user?.role !== 'Patient' && (
+                                    <InlineConfirm
+                                        onConfirm={() => handleDeleteAppointment(apt.id)}
+                                        message="Delete permanently?"
+                                        confirmText="Delete"
+                                    >
+                                        <button
+                                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                            title="Delete permanently"
+                                        >
+                                            <Trash size={16} />
+                                        </button>
+                                    </InlineConfirm>
+                                )}
+                            </div>
+
+                            {user?.role === 'Patient' && apt.status === 'Requested' && (
+                                <button
+                                    onClick={() => {
+                                        setSelectedAppointment(apt);
+                                        setRescheduleData({ date: apt.date, time: apt.time });
+                                        setShowRescheduleModal(true);
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/5 rounded-lg transition-colors border border-primary/20"
+                                >
+                                    <RefreshCcw size={14} /> Reschedule
+                                </button>
+                            )}
+                            {user?.role !== 'Patient' && (apt.status === 'Requested' || apt.status === 'Scheduled') && (
+                                <InlineConfirm
+                                    onConfirm={async () => {
                                         try {
                                             await api.put(`/appointments/${apt.id}/cancel`);
                                             toast.success('Appointment cancelled');
@@ -185,13 +211,18 @@ const Appointments = () => {
                                         } catch (err) {
                                             toast.error('Failed to cancel');
                                         }
-                                    }
-                                }}
-                                className="px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
-                            >
-                                Cancel
-                            </button>
-                        )}
+                                    }}
+                                    message="Cancel appointment?"
+                                    confirmText="Yes, Cancel"
+                                >
+                                    <button
+                                        className="px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+                                    >
+                                        Cancel
+                                    </button>
+                                </InlineConfirm>
+                            )}
+                        </div>
                     </motion.div>
                 ))}
             </div>
