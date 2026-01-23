@@ -155,3 +155,15 @@ def reschedule_appointment(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@appointment_bp.route('/appointments/<int:id>', methods=['DELETE'])
+def delete_appointment(id):
+    appointment = Appointment.query.get_or_404(id)
+    try:
+        db.session.add(appointment) # Ensure it's in session? Actually get_or_404 does it.
+        db.session.delete(appointment)
+        db.session.commit()
+        return jsonify({'message': 'Appointment deleted'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Filter, MoreVertical, Trash2, Edit } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import InlineConfirm from '../components/InlineConfirm';
 import { useAuth } from '../context/AuthContext';
 
 const countryCodes = [
@@ -55,7 +56,6 @@ const Patients = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure?')) return;
         try {
             await api.delete(`/patients/${id}`);
             toast.success('Patient deleted');
@@ -259,13 +259,18 @@ const Patients = () => {
                                                     <Edit size={18} />
                                                 </button>
                                                 {(user?.role === 'Admin' || user?.role === 'Receptionist') && (
-                                                    <button
-                                                        onClick={() => handleDelete(patient.id)}
-                                                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Delete Patient"
+                                                    <InlineConfirm
+                                                        onConfirm={() => handleDelete(patient.id)}
+                                                        message="Delete patient?"
+                                                        confirmText="Delete"
                                                     >
-                                                        <Trash2 size={18} />
-                                                    </button>
+                                                        <button
+                                                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Delete Patient"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </InlineConfirm>
                                                 )}
                                             </div>
                                         </td>

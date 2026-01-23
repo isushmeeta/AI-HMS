@@ -55,7 +55,7 @@ const Login = () => {
                             required
                         />
                     </div>
-                    <button type="submit" className="btn-primary w-full py-3 shadow-lg shadow-blue-500/20 text-white font-bold bg-blue-600 hover:bg-blue-700">
+                    <button type="submit" className="btn-primary w-full py-3 shadow-lg shadow-teal-500/20 text-white font-bold">
                         Login
                     </button>
                 </form>
@@ -63,8 +63,8 @@ const Login = () => {
                 <p className="text-center mt-6 text-sm text-slate-500">
                     Don't have an account? <Link to="/register" className="text-primary font-bold hover:underline">Register (Staff)</Link>
                 </p>
-                <div className="text-center mt-2">
-                    <Link to="/patient-register" className="text-sm text-blue-600 hover:text-blue-800 font-medium">Are you a Patient? Register here</Link>
+                <div className="text-center mt-2 text-sm text-slate-500">
+                    Are you a Patient? <Link to="/patient-register" className="text-primary font-bold hover:underline">Register here</Link>
                 </div>
             </div>
         </div>
