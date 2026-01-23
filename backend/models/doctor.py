@@ -4,6 +4,7 @@ class Doctor(db.Model):
     __tablename__ = 'doctors'
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     name = db.Column(db.String(100), nullable=False)
     specialization = db.Column(db.String(100), nullable=False)
     contact = db.Column(db.String(20), nullable=True)
@@ -12,6 +13,7 @@ class Doctor(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            'user_id': self.user_id,
             'name': self.name,
             'specialization': self.specialization,
             'contact': self.contact,

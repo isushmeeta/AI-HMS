@@ -179,6 +179,20 @@ const Register = () => {
                         </select>
                     </div>
 
+                    {formData.role === 'Doctor' && (
+                        <div>
+                            <label className="block text-sm font-medium mb-1 ml-1 text-slate-600">Specialization</label>
+                            <input
+                                className="input-field"
+                                name="specialization"
+                                placeholder="e.g. Cardiology"
+                                value={formData.specialization || ''}
+                                onChange={handleChange}
+                                required
+                            />
+                        </div>
+                    )}
+
                     <button type="submit" className="btn-primary w-full py-3 shadow-lg shadow-blue-500/20 mt-2 text-white font-bold bg-blue-600 hover:bg-blue-700">
                         Register
                     </button>

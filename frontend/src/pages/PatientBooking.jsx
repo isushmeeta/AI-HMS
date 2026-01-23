@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import api from '../services/api';
+import { Calendar, Clock, User, MessageSquare, ChevronRight } from 'lucide-react';
 
 const PatientBooking = () => {
     const { user } = useAuth();
@@ -18,11 +20,16 @@ const PatientBooking = () => {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        // Fetch doctors
-        fetch('http://localhost:5000/api/doctors')
-            .then(res => res.json())
-            .then(data => setDoctors(data))
-            .catch(err => console.error('Error fetching doctors:', err));
+        const fetchDoctors = async () => {
+            try {
+                const res = await api.get('/doctors');
+                setDoctors(res.data);
+            } catch (err) {
+                console.error('Error fetching doctors:', err);
+                setError('Failed to load doctors list');
+            }
+        };
+        fetchDoctors();
     }, []);
 
     const handleChange = (e) => {
@@ -40,27 +47,15 @@ const PatientBooking = () => {
         }
 
         try {
-            const response = await fetch('http://localhost:5000/api/appointments', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(formData)
-            });
-
-            const data = await response.json();
-            if (response.status === 409) {
-                setError('Slot not available. Please choose another time.');
-            } else if (response.ok) {
-                setBookingResult(data);
-                // Notification simulation or simple alert
-                alert(`Appointment Booked! Your Serial Number is: ${data.serial_number}`);
-            } else {
-                setError(data.error || 'Booking failed');
-            }
+            const response = await api.post('/appointments', formData);
+            setBookingResult(response.data);
+            alert(`Appointment Booked! Your Serial Number is: ${response.data.serial_number || 'Pending'}`);
         } catch (err) {
-            setError('An error occurred. Please try again.');
+            if (err.response?.status === 409) {
+                setError('Slot not available. Please choose another time.');
+            } else {
+                setError(err.response?.data?.error || 'Booking failed');
+            }
         }
     };
 

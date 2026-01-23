@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 const MainLayout = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState([]);
     const [showNotif, setShowNotif] = useState(false);
     const notifRef = useRef(null);
@@ -137,8 +138,8 @@ const MainLayout = () => {
                             <div className="text-right hidden md:block">
                                 <p className="text-sm font-semibold text-slate-700">
                                     {user ? (
-                                        (user.first_name && user.last_name)
-                                            ? `${user.role === 'Doctor' ? 'Dr. ' : ''}${user.first_name} ${user.last_name}`
+                                        (user.first_name || user.last_name)
+                                            ? `${user.role === 'Doctor' ? 'Dr. ' : ''}${user.first_name || ''} ${user.last_name || ''}`.trim()
                                             : user.username
                                     ) : 'Guest'}
                                 </p>
