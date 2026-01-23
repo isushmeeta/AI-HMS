@@ -139,8 +139,9 @@ def delete_patient(id):
     try:
         token = auth_header.split(" ")[1]
         decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
-        if decoded.get('role') != 'Admin':
-            return jsonify({'error': 'Unauthorized: Only Admins can delete patients'}), 403
+        user_role = decoded.get('role')
+        if user_role not in ['Admin', 'Receptionist']:
+            return jsonify({'error': 'Unauthorized: Only Admins or Receptionists can delete patients'}), 403
             
         patient = Patient.query.get_or_404(id)
         db.session.delete(patient)
