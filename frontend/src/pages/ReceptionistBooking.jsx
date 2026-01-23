@@ -61,10 +61,14 @@ const ReceptionistBooking = () => {
         }
     };
 
-    const filteredPatients = patients.filter(p =>
-        `${p.first_name} ${p.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredPatients = patients.filter(p => {
+        const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
+        const search = searchTerm.toLowerCase();
+        const emailMatch = p.email?.toLowerCase().includes(search);
+        return fullName.includes(search) || emailMatch;
+    });
+
+    const selectedPatient = formData.patient_id ? patients.find(p => p.id === parseInt(formData.patient_id)) : null;
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -82,34 +86,71 @@ const ReceptionistBooking = () => {
                         <label className="text-sm font-medium text-slate-600 flex items-center gap-2">
                             <User size={16} /> Select Patient
                         </label>
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Search patient by name or email..."
-                                className="input-field pl-10 mb-4"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-100">
-                            {filteredPatients.map(p => (
-                                <div
-                                    key={p.id}
-                                    onClick={() => setFormData({ ...formData, patient_id: p.id })}
-                                    className={`p-3 rounded-lg border cursor-pointer transition-all ${formData.patient_id === p.id
-                                            ? 'bg-primary/10 border-primary text-primary font-bold'
-                                            : 'bg-white border-slate-200 hover:border-primary text-slate-600'
-                                        }`}
-                                >
-                                    {p.first_name} {p.last_name}
-                                    <div className="text-[10px] font-normal opacity-60">{p.email}</div>
+
+                        {selectedPatient ? (
+                            <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                                        {(selectedPatient.first_name?.[0] || 'P')}
+                                        {(selectedPatient.last_name?.[0] || '')}
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-slate-800">
+                                            {selectedPatient.first_name} {selectedPatient.last_name}
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            {selectedPatient.email || 'No email provided'}
+                                        </p>
+                                    </div>
                                 </div>
-                            ))}
-                            {filteredPatients.length === 0 && (
-                                <div className="col-span-2 text-center py-4 text-slate-400 text-sm">No patients found</div>
-                            )}
-                        </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setFormData({ ...formData, patient_id: '' });
+                                        setSearchTerm('');
+                                    }}
+                                    className="text-primary font-bold hover:underline text-sm"
+                                >
+                                    Change Patient
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search patient by name or email..."
+                                        className="input-field pl-10"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+
+                                {searchTerm && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-100 mt-2">
+                                        {filteredPatients.map(p => (
+                                            <div
+                                                key={p.id}
+                                                onClick={() => {
+                                                    setFormData({ ...formData, patient_id: p.id });
+                                                    setSearchTerm('');
+                                                }}
+                                                className="p-3 rounded-lg border bg-white border-slate-200 hover:border-primary cursor-pointer transition-all group"
+                                            >
+                                                <div className="font-semibold text-slate-700 group-hover:text-primary">
+                                                    {p.first_name} {p.last_name}
+                                                </div>
+                                                <div className="text-[10px] text-slate-500">{p.email}</div>
+                                            </div>
+                                        ))}
+                                        {filteredPatients.length === 0 && (
+                                            <div className="col-span-2 text-center py-4 text-slate-400 text-sm italic">No patients match your search</div>
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
 
                     {/* Doctor Selection */}
