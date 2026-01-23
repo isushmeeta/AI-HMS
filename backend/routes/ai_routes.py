@@ -39,6 +39,23 @@ def predict_disease():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@ai_bp.route('/ai/patient/diagnose', methods=['POST'])
+def patient_diagnose():
+    print("DEBUG: Hit /ai/patient/diagnose endpoint")
+    data = request.get_json()
+    print(f"DEBUG: Request Data: {data}")
+    symptoms = data.get('symptoms', '')
+    if not symptoms:
+        return jsonify({'error': 'Symptoms required'}), 400
+    
+    try:
+        results = gemini_service.patient_ai_diagnosis(symptoms)
+        print(f"DEBUG: AI Results: {results}")
+        return jsonify(results), 200
+    except Exception as e:
+        print(f"DEBUG: AI Route Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @ai_bp.route('/predict/prescription', methods=['POST'])
 def suggest_prescription():
     data = request.get_json()

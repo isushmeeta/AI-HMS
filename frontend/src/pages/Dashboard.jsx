@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from './AdminDashboard';
 import DoctorDashboard from './DoctorDashboard';
 import ReceptionistDashboard from './ReceptionistDashboard';
 import api from '../services/api';
-import { Calendar, Clock, Stethoscope, RefreshCcw, CheckCircle, Clock3 } from 'lucide-react';
+import { Calendar, Clock, Stethoscope, RefreshCcw, CheckCircle, Clock3, Brain } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
     const { user, loading } = useAuth();
+    const navigate = useNavigate();
     const [appointments, setAppointments] = useState([]);
     const [fetching, setFetching] = useState(false);
     const [showRescheduleModal, setShowRescheduleModal] = useState(false);
@@ -67,9 +69,27 @@ const Dashboard = () => {
 
             return (
                 <div className="space-y-8 max-w-5xl mx-auto">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-800">Welcome back, {user.first_name || user.username}</h1>
-                        <p className="text-slate-500">Your health overview and upcoming appointments</p>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <h1 className="text-3xl font-bold text-slate-800">Welcome back, {user.first_name || user.username}</h1>
+                            <p className="text-slate-500">Your health overview and upcoming appointments</p>
+                        </div>
+                        <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            onClick={() => navigate('/symptom-checker')}
+                            className="bg-gradient-to-br from-primary to-secondary p-5 rounded-2xl text-white shadow-lg cursor-pointer flex items-center gap-4 group relative overflow-hidden flex-shrink-0 md:w-80"
+                        >
+                            <div className="absolute right-0 top-0 opacity-10 translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform">
+                                <Brain size={120} />
+                            </div>
+                            <div className="p-3 bg-white/20 rounded-xl">
+                                <Brain size={28} />
+                            </div>
+                            <div>
+                                <h3 className="font-bold">AI Symptom Checker</h3>
+                                <p className="text-xs text-white/80 mt-0.5">Check health concerns instantly</p>
+                            </div>
+                        </motion.div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
