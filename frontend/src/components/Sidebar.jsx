@@ -12,7 +12,6 @@ const Sidebar = () => {
         { icon: Home, label: 'Dashboard', path: '/' },
         // Patient specific
         ...(user?.role === 'Patient' ? [
-            { icon: Calendar, label: 'My Appointments', path: '/appointments' },
             { icon: Calendar, label: 'Book Appointment', path: '/book-appointment' },
             { icon: Activity, label: 'My Records', path: '/records' },
         ] : []),

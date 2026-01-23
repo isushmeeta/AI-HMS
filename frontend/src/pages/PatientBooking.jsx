@@ -88,10 +88,10 @@ const PatientBooking = () => {
                         </p>
                         <div className="flex gap-4 justify-center">
                             <button
-                                onClick={() => navigate('/appointments')}
+                                onClick={() => navigate('/')}
                                 className="px-6 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
                             >
-                                View My Appointments
+                                Go to Dashboard
                             </button>
                             <button
                                 onClick={() => { setBookingResult(null); setFormData({ ...formData, date: '', time: '', reason: '' }); }}

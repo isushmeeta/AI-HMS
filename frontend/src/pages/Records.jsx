@@ -3,8 +3,10 @@ import { Plus, FileText, Search, User, Stethoscope, Trash, Sparkles } from 'luci
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const Records = () => {
+    const { user } = useAuth();
     const [records, setRecords] = useState([]);
     const [patients, setPatients] = useState([]);
     const [doctors, setDoctors] = useState([]);
@@ -20,15 +22,19 @@ const Records = () => {
 
     useEffect(() => {
         fetchRecords();
-        if (showModal) {
+        if (showModal && user?.role !== 'Patient') {
             fetchPatients();
             fetchDoctors();
         }
-    }, [showModal]);
+    }, [showModal, user]);
 
     const fetchRecords = async () => {
         try {
-            const res = await api.get('/medical_records');
+            let url = '/medical_records';
+            if (user?.role === 'Patient' && user?.patient_id) {
+                url += `?patient_id=${user.patient_id}`;
+            }
+            const res = await api.get(url);
             setRecords(res.data);
         } catch (err) {
             toast.error('Failed to load records');
@@ -107,12 +113,18 @@ const Records = () => {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Medical Records</h1>
-                    <p className="text-slate-500">Patient diagnoses, prescriptions, and history</p>
+                    <h1 className="text-2xl font-bold text-slate-800">
+                        {user?.role === 'Patient' ? 'My Medical History' : 'Medical Records'}
+                    </h1>
+                    <p className="text-slate-500">
+                        {user?.role === 'Patient' ? 'Past diagnoses, prescriptions, and visit history' : 'Patient diagnoses, prescriptions, and history'}
+                    </p>
                 </div>
-                <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
-                    <Plus size={20} /> Add Record
-                </button>
+                {user?.role !== 'Patient' && (
+                    <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+                        <Plus size={20} /> Add Record
+                    </button>
+                )}
             </div>
 
             <div className="glass-panel p-6">
