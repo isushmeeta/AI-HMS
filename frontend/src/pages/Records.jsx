@@ -3,8 +3,10 @@ import { Plus, FileText, Search, User, Stethoscope, Trash, Sparkles } from 'luci
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const Records = () => {
+    const { user } = useAuth();
     const [records, setRecords] = useState([]);
     const [patients, setPatients] = useState([]);
     const [doctors, setDoctors] = useState([]);
@@ -20,16 +22,43 @@ const Records = () => {
 
     useEffect(() => {
         fetchRecords();
-        if (showModal) {
+        if (showModal && user?.role !== 'Patient') {
             fetchPatients();
             fetchDoctors();
         }
-    }, [showModal]);
+    }, [showModal, user]);
 
     const fetchRecords = async () => {
         try {
-            const res = await api.get('/medical_records');
-            setRecords(res.data);
+            let recordsUrl = '/medical_records';
+            let appointmentsUrl = '/appointments';
+
+            if (user?.role === 'Patient' && user?.patient_id) {
+                recordsUrl += `?patient_id=${user.patient_id}`;
+                appointmentsUrl += `?patient_id=${user.patient_id}`;
+
+                const [recordsRes, appointmentsRes] = await Promise.all([
+                    api.get(recordsUrl),
+                    api.get(appointmentsUrl)
+                ]);
+
+                // For patients, we might want to show "Completed" appointments as part of records
+                // Or just show all appointments. Let's merge them for a chronological history
+                const combined = [
+                    ...recordsRes.data.map(r => ({ ...r, type: 'record' })),
+                    ...appointmentsRes.data.filter(a => a.status === 'Completed' || a.status === 'Scheduled').map(a => ({
+                        ...a,
+                        type: 'appointment',
+                        visit_date: a.date, // Use for sorting
+                        diagnosis: a.reason || 'Routine Checkup'
+                    }))
+                ].sort((a, b) => new Date(b.visit_date || b.date) - new Date(a.visit_date || a.date));
+
+                setRecords(combined);
+            } else {
+                const res = await api.get(recordsUrl);
+                setRecords(res.data.map(r => ({ ...r, type: 'record' })));
+            }
         } catch (err) {
             toast.error('Failed to load records');
         }
@@ -107,12 +136,18 @@ const Records = () => {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Medical Records</h1>
-                    <p className="text-slate-500">Patient diagnoses, prescriptions, and history</p>
+                    <h1 className="text-2xl font-bold text-slate-800">
+                        {user?.role === 'Patient' ? 'My Medical History' : 'Medical Records'}
+                    </h1>
+                    <p className="text-slate-500">
+                        {user?.role === 'Patient' ? 'Past diagnoses, prescriptions, and visit history' : 'Patient diagnoses, prescriptions, and history'}
+                    </p>
                 </div>
-                <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
-                    <Plus size={20} /> Add Record
-                </button>
+                {user?.role !== 'Patient' && (
+                    <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+                        <Plus size={20} /> Add Record
+                    </button>
+                )}
             </div>
 
             <div className="glass-panel p-6">
@@ -121,7 +156,7 @@ const Records = () => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                         <input
                             type="text"
-                            placeholder="Search by patient or diagnosis..."
+                            placeholder={user?.role === 'Patient' ? "Search my history..." : "Search by patient or diagnosis..."}
                             className="input-field pl-10"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
@@ -130,45 +165,61 @@ const Records = () => {
                 </div>
 
                 <div className="space-y-4">
-                    {filteredRecords.map((record, index) => (
+                    {records.map((record, index) => (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05 }}
-                            key={record.id}
+                            key={record.id + (record.type || 'record')}
                             className="bg-white/50 border border-slate-100 rounded-xl p-6 hover:shadow-md transition-all"
                         >
                             <div className="flex justify-between items-start mb-4">
                                 <div>
-                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                        <User size={20} className="text-primary" /> {record.patient_name}
-                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                            <User size={20} className="text-primary" /> {record.patient_name}
+                                        </h3>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${record.type === 'appointment' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'
+                                            }`}>
+                                            {record.type === 'appointment' ? 'Visit' : 'Medical Record'}
+                                        </span>
+                                    </div>
                                     <p className="text-sm text-slate-500 mt-1">
-                                        Dr. {record.doctor_name} • {new Date(record.visit_date).toLocaleDateString()}
+                                        Dr. {record.doctor_name} • {new Date(record.visit_date || record.date).toLocaleDateString()}
                                     </p>
                                 </div>
-                                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                                    <FileText size={20} />
+                                <div className={`p-2 rounded-lg ${record.type === 'appointment' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
+                                    {record.type === 'appointment' ? <Stethoscope size={20} /> : <FileText size={20} />}
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-1">
-                                    <span className="text-xs font-bold text-slate-400 uppercase">Diagnosis</span>
+                                    <span className="text-xs font-bold text-slate-400 uppercase">
+                                        {record.type === 'appointment' ? 'Reason' : 'Diagnosis'}
+                                    </span>
                                     <p className="text-slate-700 font-medium">{record.diagnosis}</p>
                                 </div>
-                                <div className="space-y-1">
-                                    <span className="text-xs font-bold text-slate-400 uppercase">Prescription</span>
-                                    {Array.isArray(record.prescription) ? (
-                                        <ul className="text-sm text-slate-700 space-y-1">
-                                            {record.prescription.map((med, i) => (
-                                                <li key={i}>• <b>{med.name}</b> - {med.dosage} ({med.frequency})</li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <p className="text-slate-700">{typeof record.prescription === 'string' ? record.prescription : 'No prescription'}</p>
-                                    )}
-                                </div>
+                                {record.type === 'record' && (
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-bold text-slate-400 uppercase">Prescription</span>
+                                        {Array.isArray(record.prescription) ? (
+                                            <ul className="text-sm text-slate-700 space-y-1">
+                                                {record.prescription.map((med, i) => (
+                                                    <li key={i}>• <b>{med.name}</b> - {med.dosage} ({med.frequency})</li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-slate-700">{typeof record.prescription === 'string' ? record.prescription : 'No prescription'}</p>
+                                        )}
+                                    </div>
+                                )}
+                                {record.type === 'appointment' && (
+                                    <div className="space-y-1">
+                                        <span className="text-xs font-bold text-slate-400 uppercase">Status</span>
+                                        <p className="text-slate-700 font-medium capitalize">{record.status}</p>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     ))}

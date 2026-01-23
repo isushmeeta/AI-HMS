@@ -15,7 +15,7 @@ const countryCodes = [
 
 const Register = () => {
     const [formData, setFormData] = useState({
-        username: '', email: '', mobileNumber: '', countryCode: '+1', password: '', role: 'Doctor'
+        username: '', email: '', mobileNumber: '', countryCode: '+1', password: '', role: 'Doctor', gender: ''
     });
     const [showPassword, setShowPassword] = useState(false);
     const [passwordStrength, setPasswordStrength] = useState(0);
@@ -171,6 +171,16 @@ const Register = () => {
                         )}
                     </div>
                     <div>
+                        <label className="block text-sm font-medium mb-1 ml-1 text-slate-600">Gender</label>
+                        <select className="input-field" name="gender" value={formData.gender || ''} onChange={handleChange} required>
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div>
                         <label className="block text-sm font-medium mb-1 ml-1 text-slate-600">Role</label>
                         <select className="input-field" name="role" value={formData.role} onChange={handleChange}>
                             <option value="Doctor">Doctor</option>
@@ -178,6 +188,20 @@ const Register = () => {
                             <option value="Admin">Admin</option>
                         </select>
                     </div>
+
+                    {formData.role === 'Doctor' && (
+                        <div>
+                            <label className="block text-sm font-medium mb-1 ml-1 text-slate-600">Specialization</label>
+                            <input
+                                className="input-field"
+                                name="specialization"
+                                placeholder="e.g. Cardiology"
+                                value={formData.specialization || ''}
+                                onChange={handleChange}
+                                required
+                            />
+                        </div>
+                    )}
 
                     <button type="submit" className="btn-primary w-full py-3 shadow-lg shadow-blue-500/20 mt-2 text-white font-bold bg-blue-600 hover:bg-blue-700">
                         Register

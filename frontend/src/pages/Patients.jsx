@@ -5,14 +5,31 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
+const countryCodes = [
+    { code: '+1', label: 'US (+1)', minLength: 10 },
+    { code: '+44', label: 'UK (+44)', minLength: 10 },
+    { code: '+91', label: 'IN (+91)', minLength: 10 },
+    { code: '+880', label: 'BD (+880)', minLength: 10 },
+    { code: '+61', label: 'AU (+61)', minLength: 9 },
+    { code: '+81', label: 'JP (+81)', minLength: 10 },
+];
+
 const Patients = () => {
     const { user } = useAuth();
     const [patients, setPatients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [filterMyPatients, setFilterMyPatients] = useState(user?.role === 'Doctor'); // Default to true if Doctor
+    const [editMode, setEditMode] = useState(false);
+    const [selectedPatientId, setSelectedPatientId] = useState(null);
+    const [filterMyPatients, setFilterMyPatients] = useState(user?.role === 'Doctor');
     const [formData, setFormData] = useState({
-        first_name: '', last_name: '', dob: '', gender: 'Male', contact_number: ''
+        first_name: '',
+        last_name: '',
+        dob: '',
+        gender: 'Male',
+        mobileNumber: '',
+        countryCode: '+1',
+        email: ''
     });
 
     useEffect(() => {
@@ -53,15 +70,80 @@ const Patients = () => {
         }
     };
 
+    const handleEdit = (patient) => {
+        setSelectedPatientId(patient.id);
+        setEditMode(true);
+
+        // Parse "contact_number" into countryCode and mobileNumber
+        // This is a bit tricky if formats vary, but auth logic uses +XXX...
+        const country = countryCodes.find(c => patient.contact_number.startsWith(c.code));
+        const code = country ? country.code : '+1';
+        const phone = country ? patient.contact_number.slice(country.code.length) : patient.contact_number;
+
+        setFormData({
+            first_name: patient.first_name,
+            last_name: patient.last_name,
+            dob: patient.dob,
+            gender: patient.gender,
+            contact_number: patient.contact_number, // Fallback
+            countryCode: code,
+            mobileNumber: phone,
+            email: patient.email || ''
+        });
+        setShowModal(true);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Optional Email Validation
+        if (formData.email) {
+            const allowedDomains = ['gmail.com', 'ymail.com', 'outlook.com', 'yahoo.com', 'icloud.com'];
+            const domain = formData.email.split('@')[1];
+            if (!allowedDomains.includes(domain)) {
+                toast.error(`Email must be one of: ${allowedDomains.join(', ')}`);
+                return;
+            }
+        }
+
+        // Phone Validation
+        const selectedCountry = countryCodes.find(c => c.code === formData.countryCode);
+        if (formData.mobileNumber.length < selectedCountry.minLength) {
+            toast.error(`Mobile number must be at least ${selectedCountry.minLength} digits for ${selectedCountry.label}`);
+            return;
+        }
+
+        const fullMobile = `${formData.countryCode}${formData.mobileNumber}`;
+
         try {
-            await api.post('/patients', formData);
-            toast.success('Patient added successfully');
+            const payload = {
+                first_name: formData.first_name,
+                last_name: formData.last_name,
+                dob: formData.dob,
+                gender: formData.gender,
+                contact_number: fullMobile,
+                email: formData.email
+            };
+
+            if (editMode) {
+                await api.put(`/patients/${selectedPatientId}`, payload);
+                toast.success('Patient updated successfully');
+            } else {
+                await api.post('/patients', payload);
+                toast.success('Patient added successfully');
+            }
+
             setShowModal(false);
+            setEditMode(false);
+            setSelectedPatientId(null);
+            setFormData({
+                first_name: '', last_name: '', dob: '', gender: 'Male',
+                mobileNumber: '', countryCode: '+1', email: ''
+            });
             fetchPatients();
         } catch (err) {
-            toast.error('Failed to add patient');
+            const errorMsg = err.response?.data?.error || 'Operation failed';
+            toast.error(errorMsg);
         }
     };
 
@@ -87,7 +169,15 @@ const Patients = () => {
                         </button>
                     )}
                     <button
-                        onClick={() => setShowModal(true)}
+                        onClick={() => {
+                            setEditMode(false);
+                            setSelectedPatientId(null);
+                            setFormData({
+                                first_name: '', last_name: '', dob: '', gender: 'Male',
+                                mobileNumber: '', countryCode: '+1', email: ''
+                            });
+                            setShowModal(true);
+                        }}
                         className="btn-primary flex items-center gap-2"
                     >
                         <Plus size={20} />
@@ -154,14 +244,19 @@ const Patients = () => {
                                         </td>
                                         <td className="py-4 text-slate-600">{patient.contact_number}</td>
                                         <td className="py-4 pr-4 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleEdit(patient)}
+                                                    className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                                                    title="Edit Patient"
+                                                >
                                                     <Edit size={18} />
                                                 </button>
-                                                {user?.role === 'Admin' && (
+                                                {(user?.role === 'Admin' || user?.role === 'Receptionist') && (
                                                     <button
                                                         onClick={() => handleDelete(patient.id)}
                                                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Delete Patient"
                                                     >
                                                         <Trash2 size={18} />
                                                     </button>
@@ -186,7 +281,7 @@ const Patients = () => {
                             className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
                         >
                             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                                <h3 className="text-xl font-bold text-slate-800">Add New Patient</h3>
+                                <h3 className="text-xl font-bold text-slate-800">{editMode ? 'Edit Patient' : 'Add New Patient'}</h3>
                                 <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">×</button>
                             </div>
                             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -236,19 +331,45 @@ const Patients = () => {
                                         </select>
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Contact Number</label>
-                                    <input
-                                        required
-                                        type="tel"
-                                        className="input-field"
-                                        value={formData.contact_number}
-                                        onChange={e => setFormData({ ...formData, contact_number: e.target.value })}
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Contact Number</label>
+                                        <div className="flex gap-2">
+                                            <select
+                                                value={formData.countryCode}
+                                                onChange={e => setFormData({ ...formData, countryCode: e.target.value })}
+                                                className="input-field w-24 px-1 text-xs"
+                                            >
+                                                {countryCodes.map(c => (
+                                                    <option key={c.code} value={c.code}>{c.label}</option>
+                                                ))}
+                                            </select>
+                                            <input
+                                                required
+                                                type="tel"
+                                                className="input-field flex-1"
+                                                placeholder={`Min ${countryCodes.find(c => c.code === formData.countryCode)?.minLength} digits`}
+                                                value={formData.mobileNumber}
+                                                onChange={e => setFormData({ ...formData, mobileNumber: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Email (Optional)</label>
+                                        <input
+                                            type="email"
+                                            className="input-field"
+                                            value={formData.email}
+                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                            placeholder="e.g. name@gmail.com"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="pt-4 flex gap-3 justify-end">
                                     <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">Cancel</button>
-                                    <button type="submit" className="btn-primary">Save Patient</button>
+                                    <button type="submit" className="btn-primary">
+                                        {editMode ? 'Update Patient' : 'Save Patient'}
+                                    </button>
                                 </div>
                             </form>
                         </motion.div>

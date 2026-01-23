@@ -1,17 +1,24 @@
 import { useState, useEffect } from 'react';
-import { Plus, Calendar, Clock, User, Stethoscope } from 'lucide-react';
+import { Plus, Calendar, Clock, User, Stethoscope, RefreshCcw } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const Appointments = () => {
+    const { user } = useAuth();
     const [appointments, setAppointments] = useState([]);
     const [patients, setPatients] = useState([]);
     const [doctors, setDoctors] = useState([]);
     const [view, setView] = useState('all'); // all | queue
     const [showModal, setShowModal] = useState(false);
+    const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+    const [selectedAppointment, setSelectedAppointment] = useState(null);
     const [formData, setFormData] = useState({
         patient_id: '', doctor_id: '', date: '', time: '', reason: ''
+    });
+    const [rescheduleData, setRescheduleData] = useState({
+        date: '', time: ''
     });
 
     useEffect(() => {
@@ -20,16 +27,21 @@ const Appointments = () => {
             fetchPatients();
             fetchDoctors();
         }
-    }, [view, showModal]);
+    }, [view, showModal, user]);
 
     const fetchAppointments = async () => {
         try {
             let url = '/appointments';
+            const params = new URLSearchParams();
             if (view === 'queue') {
-                const today = new Date().toISOString().split('T')[0];
-                url += `?date=${today}`;
+                params.append('date', new Date().toISOString().split('T')[0]);
             }
-            const res = await api.get(url);
+            if (user?.role === 'Patient' && user?.patient_id) {
+                params.append('patient_id', user.patient_id);
+            }
+
+            const queryString = params.toString();
+            const res = await api.get(url + (queryString ? `?${queryString}` : ''));
             setAppointments(res.data);
         } catch (error) {
             toast.error('Failed to fetch appointments');
@@ -62,16 +74,36 @@ const Appointments = () => {
         }
     };
 
+    const handleReschedule = async (e) => {
+        e.preventDefault();
+        try {
+            await api.put(`/appointments/${selectedAppointment.id}/reschedule`, rescheduleData);
+            toast.success('Reschedule request sent');
+            setShowRescheduleModal(false);
+            fetchAppointments();
+        } catch (error) {
+            toast.error('Failed to reschedule');
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Appointments</h1>
-                    <p className="text-slate-500">Manage schedule and patient queues</p>
+                    <h1 className="text-2xl font-bold text-slate-800">
+                        {user?.role === 'Patient' ? 'My Appointments' : 'Appointments'}
+                    </h1>
+                    <p className="text-slate-500">
+                        {user?.role === 'Patient'
+                            ? 'View your scheduled and requested visits'
+                            : 'Manage schedule and patient queues'}
+                    </p>
                 </div>
-                <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
-                    <Plus size={20} /> Schedule Appointment
-                </button>
+                {user?.role !== 'Patient' && user?.role !== 'Receptionist' && (
+                    <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+                        <Plus size={20} /> Schedule Appointment
+                    </button>
+                )}
             </div>
 
             <div className="flex gap-4 border-b border-slate-200">
@@ -118,13 +150,43 @@ const Appointments = () => {
                         </div>
                         <div>
                             <span className={`px-3 py-1 text-xs font-bold rounded-full ${apt.status === 'Scheduled' ? 'bg-blue-100 text-blue-700' :
-                                    apt.status === 'Requested' ? 'bg-amber-100 text-amber-700' :
-                                        apt.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                            'bg-red-100 text-red-700'
+                                apt.status === 'Requested' ? 'bg-amber-100 text-amber-700' :
+                                    apt.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                                        'bg-red-100 text-red-700'
                                 }`}>
                                 {apt.status}
                             </span>
                         </div>
+                        {user?.role === 'Patient' && apt.status === 'Requested' && (
+                            <button
+                                onClick={() => {
+                                    setSelectedAppointment(apt);
+                                    setRescheduleData({ date: apt.date, time: apt.time });
+                                    setShowRescheduleModal(true);
+                                }}
+                                className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/5 rounded-lg transition-colors border border-primary/20"
+                            >
+                                <RefreshCcw size={14} /> Reschedule
+                            </button>
+                        )}
+                        {user?.role !== 'Patient' && (apt.status === 'Requested' || apt.status === 'Scheduled') && (
+                            <button
+                                onClick={async () => {
+                                    if (window.confirm('Are you sure you want to cancel this appointment?')) {
+                                        try {
+                                            await api.put(`/appointments/${apt.id}/cancel`);
+                                            toast.success('Appointment cancelled');
+                                            fetchAppointments();
+                                        } catch (err) {
+                                            toast.error('Failed to cancel');
+                                        }
+                                    }
+                                }}
+                                className="px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+                            >
+                                Cancel
+                            </button>
+                        )}
                     </motion.div>
                 ))}
             </div>
@@ -170,6 +232,44 @@ const Appointments = () => {
                             <div className="flex justify-end gap-2 pt-4">
                                 <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">Cancel</button>
                                 <button type="submit" className="btn-primary">Schedule</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showRescheduleModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold">Reschedule Request</h3>
+                            <button onClick={() => setShowRescheduleModal(false)} className="text-slate-400">×</button>
+                        </div>
+                        <form onSubmit={handleReschedule} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">New Date</label>
+                                <input
+                                    type="date"
+                                    className="input-field"
+                                    value={rescheduleData.date}
+                                    min={new Date().toISOString().split('T')[0]}
+                                    onChange={e => setRescheduleData({ ...rescheduleData, date: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">New Time</label>
+                                <input
+                                    type="time"
+                                    className="input-field"
+                                    value={rescheduleData.time}
+                                    onChange={e => setRescheduleData({ ...rescheduleData, time: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2 pt-4">
+                                <button type="button" onClick={() => setShowRescheduleModal(false)} className="btn-ghost">Cancel</button>
+                                <button type="submit" className="btn-primary">Send Request</button>
                             </div>
                         </form>
                     </div>

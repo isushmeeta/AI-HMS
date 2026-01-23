@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 const MainLayout = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState([]);
     const [showNotif, setShowNotif] = useState(false);
     const notifRef = useRef(null);
@@ -35,15 +36,17 @@ const MainLayout = () => {
 
     const fetchNotifications = async () => {
         try {
-            // Need to know who we are fetching for. backend expects query param
-            // Assuming we added a generic /notifications route or use specific ones
-            // Based on earlier check, it seemed to be /notifications?doctor_id=...
-            // Let's try a generic or role based approach if possible, or default to empty if not doc
+            let url = '';
             if (user?.role === 'Doctor') {
-                const res = await api.get(`/notifications?doctor_id=${user.id}`);
+                url = `/notifications?doctor_id=${user.id}`;
+            } else if (user?.role === 'Patient' && user?.patient_id) {
+                url = `/notifications?patient_id=${user.patient_id}`;
+            }
+
+            if (url) {
+                const res = await api.get(url);
                 setNotifications(res.data);
             } else {
-                // For now only doctors have the notification route implementation
                 setNotifications([]);
             }
         } catch (err) {
@@ -137,8 +140,8 @@ const MainLayout = () => {
                             <div className="text-right hidden md:block">
                                 <p className="text-sm font-semibold text-slate-700">
                                     {user ? (
-                                        (user.first_name && user.last_name)
-                                            ? `${user.role === 'Doctor' ? 'Dr. ' : ''}${user.first_name} ${user.last_name}`
+                                        (user.first_name || user.last_name)
+                                            ? `${user.role === 'Doctor' ? 'Dr. ' : ''}${user.first_name || ''} ${user.last_name || ''}`.trim()
                                             : user.username
                                     ) : 'Guest'}
                                 </p>

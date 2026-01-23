@@ -28,7 +28,6 @@ const Sidebar = () => {
         ...(user?.role === 'Receptionist' ? [
             { icon: Users, label: 'Patients', path: '/patients' },
             { icon: Calendar, label: 'Appointments', path: '/appointments' },
-            { icon: Activity, label: 'Registration', path: '/patient-register' },
         ] : []),
 
         // Admin specific

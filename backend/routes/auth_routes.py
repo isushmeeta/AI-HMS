@@ -61,24 +61,31 @@ def register():
         db.session.flush() # Flush to get new_user.id
 
         if new_user.role == 'Patient':
-            # Create associated Patient record
-            # We need to split username or ask for first/last name. 
-            # For now assuming username is "First Last" or just using username as First Name
-            names = data['username'].split(' ', 1)
+            names = data['username'].strip().split(' ', 1)
             first_name = names[0]
-            last_name = names[1] if len(names) > 1 else 'Unknown'
+            last_name = names[1] if len(names) > 1 else ''
             
             from models.patient import Patient
             new_patient = Patient(
                 user_id=new_user.id,
                 first_name=first_name,
                 last_name=last_name,
-                dob=datetime.datetime.strptime('2000-01-01', '%Y-%m-%d').date(), # Default/Placeholder
-                gender='Other', # Default/Placeholder
+                dob=datetime.datetime.strptime('2000-01-01', '%Y-%m-%d').date(),
+                gender=data.get('gender', 'Other'),
                 contact_number=data['mobile'],
                 email=data['email']
             )
             db.session.add(new_patient)
+        elif new_user.role == 'Doctor':
+            from models.doctor import Doctor
+            new_doctor = Doctor(
+                user_id=new_user.id,
+                name=data['username'],
+                specialization=data.get('specialization', 'General Practitioner'),
+                gender=data.get('gender', 'Other'),
+                contact=data['mobile']
+            )
+            db.session.add(new_doctor)
 
         db.session.commit()
         return jsonify({'message': 'User registered successfully'}), 201
@@ -105,12 +112,15 @@ def login():
                 user_data['patient_id'] = patient.id
                 user_data['first_name'] = patient.first_name
                 user_data['last_name'] = patient.last_name
+                user_data['gender'] = patient.gender
         elif user.role == 'Doctor':
             from models.doctor import Doctor
-            doctor = Doctor.query.filter_by(user_id=user.id).first() if hasattr(Doctor, 'user_id') else None
+            doctor = Doctor.query.filter_by(user_id=user.id).first()
             if doctor:
+                user_data['doctor_id'] = doctor.id
                 user_data['first_name'] = doctor.name.split(' ')[0]
                 user_data['last_name'] = ' '.join(doctor.name.split(' ')[1:]) if ' ' in doctor.name else ''
+                user_data['gender'] = doctor.gender
 
         response_data = {
             'token': token,
@@ -120,6 +130,31 @@ def login():
         return jsonify(response_data), 200
     
     return jsonify({'error': 'Invalid credentials'}), 401
+
+@auth_bp.route('/auth/profile', methods=['PUT'])
+def update_profile():
+    data = request.get_json()
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return jsonify({'error': 'Missing token'}), 401
+    
+    try:
+        token = auth_header.split(" ")[1]
+        decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+        user = User.query.get(decoded['user_id'])
+        
+        if 'username' in data:
+            user.username = data['username']
+        if 'mobile' in data:
+            # Basic validation for mobile
+            if not re.match(r'^\+\d{1,4}\d{7,15}$', data['mobile']):
+                return jsonify({'error': 'Mobile number must include country code'}), 400
+            user.mobile = data['mobile']
+        
+        db.session.commit()
+        return jsonify(user.to_dict()), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 401
 
 @auth_bp.route('/auth/me', methods=['GET'])
 def get_current_user():
@@ -142,12 +177,15 @@ def get_current_user():
                 user_data['patient_id'] = patient.id
                 user_data['first_name'] = patient.first_name
                 user_data['last_name'] = patient.last_name
+                user_data['gender'] = patient.gender
         elif user.role == 'Doctor':
             from models.doctor import Doctor
-            doctor = Doctor.query.filter_by(user_id=user.id).first() if hasattr(Doctor, 'user_id') else None
+            doctor = Doctor.query.filter_by(user_id=user.id).first()
             if doctor:
+                user_data['doctor_id'] = doctor.id
                 user_data['first_name'] = doctor.name.split(' ')[0]
                 user_data['last_name'] = ' '.join(doctor.name.split(' ')[1:]) if ' ' in doctor.name else ''
+                user_data['gender'] = doctor.gender
 
         return jsonify(user_data), 200
     except Exception:

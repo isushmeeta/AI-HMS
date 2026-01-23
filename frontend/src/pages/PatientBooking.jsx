@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import api from '../services/api';
+import { Calendar, Clock, User, MessageSquare, ChevronRight } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const PatientBooking = () => {
     const { user } = useAuth();
@@ -18,11 +21,16 @@ const PatientBooking = () => {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        // Fetch doctors
-        fetch('http://localhost:5000/api/doctors')
-            .then(res => res.json())
-            .then(data => setDoctors(data))
-            .catch(err => console.error('Error fetching doctors:', err));
+        const fetchDoctors = async () => {
+            try {
+                const res = await api.get('/doctors');
+                setDoctors(res.data);
+            } catch (err) {
+                console.error('Error fetching doctors:', err);
+                setError('Failed to load doctors list');
+            }
+        };
+        fetchDoctors();
     }, []);
 
     const handleChange = (e) => {
@@ -40,27 +48,15 @@ const PatientBooking = () => {
         }
 
         try {
-            const response = await fetch('http://localhost:5000/api/appointments', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(formData)
-            });
-
-            const data = await response.json();
-            if (response.status === 409) {
-                setError('Slot not available. Please choose another time.');
-            } else if (response.ok) {
-                setBookingResult(data);
-                // Notification simulation or simple alert
-                alert(`Appointment Booked! Your Serial Number is: ${data.serial_number}`);
-            } else {
-                setError(data.error || 'Booking failed');
-            }
+            const response = await api.post('/appointments', formData);
+            setBookingResult(response.data);
+            toast.success("Appointment request submitted successfully!");
         } catch (err) {
-            setError('An error occurred. Please try again.');
+            if (err.response?.status === 409) {
+                setError('Slot not available. Please choose another time.');
+            } else {
+                setError(err.response?.data?.error || 'Booking failed');
+            }
         }
     };
 
@@ -92,10 +88,10 @@ const PatientBooking = () => {
                         </p>
                         <div className="flex gap-4 justify-center">
                             <button
-                                onClick={() => navigate('/appointments')}
+                                onClick={() => navigate('/')}
                                 className="px-6 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
                             >
-                                View My Appointments
+                                Go to Dashboard
                             </button>
                             <button
                                 onClick={() => { setBookingResult(null); setFormData({ ...formData, date: '', time: '', reason: '' }); }}
