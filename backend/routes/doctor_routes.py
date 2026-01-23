@@ -22,6 +22,26 @@ def get_doctors():
     doctors = Doctor.query.all()
     return jsonify([d.to_dict() for d in doctors]), 200
 
+@doctor_bp.route('/doctors/<int:id>', methods=['GET'])
+def get_doctor(id):
+    from models.user import User
+    # Join with User table to get email and registration mobile
+    result = db.session.query(Doctor, User).outerjoin(User, Doctor.user_id == User.id).filter(Doctor.id == id).first()
+    
+    if not result:
+        return jsonify({'error': 'Doctor not found'}), 404
+        
+    doctor, user = result
+    data = doctor.to_dict()
+    
+    if user:
+        data['email'] = user.email
+        # If doctor.contact is empty, use user.mobile
+        if not data.get('contact'):
+            data['contact'] = user.mobile
+            
+    return jsonify(data), 200
+
 @doctor_bp.route('/doctors/<int:id>', methods=['PUT'])
 def update_doctor(id):
     doctor = Doctor.query.get_or_404(id)

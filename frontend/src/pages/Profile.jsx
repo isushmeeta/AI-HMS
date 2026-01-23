@@ -293,7 +293,8 @@ const Profile = () => {
                             value={formData.email || ''}
                             onChange={handleChange}
                             className="input-field text-slate-500 bg-slate-50"
-                            disabled={user?.role === 'Doctor'} // Doctors email usually tied to User account
+                            disabled={true} // Email tied to account
+                            title="Email cannot be changed"
                         />
                     </div>
                     {user?.role === 'Patient' && (
