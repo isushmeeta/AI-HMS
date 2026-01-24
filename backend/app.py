@@ -16,7 +16,8 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    CORS(app)
+    # Simplified CORS for deployment (allows all origins)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     db.init_app(app)
 
     app.register_blueprint(patient_bp, url_prefix='/api')
@@ -34,6 +35,7 @@ def create_app():
 
     return app
 
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
     app.run(debug=True)
