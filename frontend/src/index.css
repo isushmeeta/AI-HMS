@@ -19,11 +19,11 @@
 
 @layer components {
   .glass-panel {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl;
+    @apply bg-white border border-slate-100 shadow-xl rounded-2xl;
   }
 
   .glass-card {
-    @apply bg-white/50 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl transition-all duration-300 hover:shadow-xl hover:bg-white/60;
+    @apply bg-white border border-slate-100 shadow-lg rounded-xl transition-all duration-300 hover:shadow-xl hover:bg-slate-50/50;
   }
 
   .btn-primary {
@@ -39,7 +39,7 @@
   }
 
   .input-field {
-    @apply w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[--color-primary]/50 focus:border-[--color-primary]/50 transition-all duration-200 backdrop-blur-sm;
+    @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[--color-primary]/50 focus:border-[--color-primary]/50 transition-all duration-200;
   }
 }
 

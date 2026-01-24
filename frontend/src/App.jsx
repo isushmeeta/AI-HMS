@@ -16,6 +16,9 @@ import PatientRegister from './pages/PatientRegister';
 import PatientBooking from './pages/PatientBooking';
 import ReceptionistBooking from './pages/ReceptionistBooking';
 import Profile from './pages/Profile';
+import PatientAI from './pages/PatientAI';
+import AdminSettings from './pages/AdminSettings';
+import SystemInsights from './pages/SystemInsights';
 
 function App() {
   return (
@@ -38,6 +41,7 @@ function App() {
             <Route path="appointments" element={<Appointments />} />
             <Route path="records" element={<Records />} />
             <Route path="ai-insights" element={<AIInsights />} />
+            <Route path="symptom-checker" element={<PatientAI />} />
             <Route path="book-appointment" element={<PatientBooking />} />
             <Route path="receptionist/book" element={
               <ProtectedRoute roles={['Receptionist', 'Admin']}>
@@ -45,6 +49,8 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="profile" element={<Profile />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="system-insights" element={<SystemInsights />} />
             <Route path="*" element={<div className="p-8 text-center text-slate-500">Page not found</div>} />
           </Route>
         </Routes>

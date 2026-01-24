@@ -16,8 +16,22 @@ class GeminiService:
 
     def _get_model(self):
         if not self.model:
+            print("DEBUG: Configuring Gemini model...")
             self.configure()
         return self.model
+
+    def _extract_json(self, text):
+        """Extracts JSON from markdown code blocks or raw text."""
+        try:
+            # Look for JSON code blocks
+            if '```json' in text:
+                text = text.split('```json')[1].split('```')[0]
+            elif '```' in text:
+                text = text.split('```')[1].split('```')[0]
+            return json.loads(text.strip())
+        except Exception as e:
+            print(f"DEBUG: JSON extraction failed: {e}. Raw text: {text}")
+            raise e
 
     def predict_diagnosis(self, symptoms):
         model = self._get_model()
@@ -32,10 +46,8 @@ class GeminiService:
         """
         try:
             response = model.generate_content(prompt)
-            print(f"Gemini Response: {response.text}") # Debug log
-            # Basic cleanup if markdown checks are included
-            text = response.text.replace('```json', '').replace('```', '').strip()
-            return json.loads(text)
+            print(f"DEBUG: Gemini predict_diagnosis response: {response.text}")
+            return self._extract_json(response.text)
         except Exception as e:
             print(f"Gemini Error details: {str(e)}")
             return [{"condition": f"Error: {str(e)}", "confidence": 0}]
@@ -155,6 +167,33 @@ class GeminiService:
         except Exception as e:
             return f"Error: {str(e)}"
 
+    def patient_ai_diagnosis(self, symptoms):
+        model = self._get_model()
+        if not model:
+            return [{"condition": "AI Service Unavailable", "confidence": 0, "specialization": "General Medicine"}]
+
+        prompt = f"""
+        Act as a Medical Triage Assistant. Analyze these symptoms for a patient: "{symptoms}".
+        1. Identify up to 3 possible conditions.
+        2. Recommend the most relevant medical department or specialization for each (e.g., Cardiology, Neurology, ENT, General Medicine).
+        3. Do NOT provide medicine dosages.
+        
+        Return ONLY a JSON array of objects. Each object must have:
+        - condition (string)
+        - confidence (integer 0-100)
+        - specialization (string - Recommended department)
+        - advice (string - 1 short tip, e.g., "Stay hydrated", "Avoid bright lights")
+        
+        Example: [{{"condition": "Migraine", "confidence": 85, "specialization": "Neurology", "advice": "Rest in a quiet, dark room"}}]
+        """
+        try:
+            response = model.generate_content(prompt)
+            print(f"DEBUG: Gemini patient_ai_diagnosis response: {response.text}")
+            return self._extract_json(response.text)
+        except Exception as e:
+            print(f"Gemini Error (Patient Diagnose): {e}")
+            return [{"condition": f"Analysis Error ({str(e)})", "confidence": 0, "specialization": "Help Desk", "advice": "Please check backend logs."}]
+
     def symptom_pre_check(self, symptoms):
         model = self._get_model()
         if not model: return "AI Service Unavailable"
@@ -167,6 +206,26 @@ class GeminiService:
         - **Urgency**: (Normal/Urgent/Emergency - 1 word)
         - **Disclaimer**: (Required short sentence)
         - Max 5 total bullets. NO paragraphs.
+        """
+        try:
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+    def generate_system_report(self, stats):
+        model = self._get_model()
+        if not model: return "AI Service Unavailable"
+
+        prompt = f"""
+        Act as a Hospital Management Consultant. Analyze these hospital stats: {json.dumps(stats)}.
+        Provide a professional executive summary.
+        Formatting Rules:
+        - **Executive Overview**: (Short paragraph)
+        - **Operational Highlights**: (Bullets)
+        - **Resource Recommendations**: (Actionable bullets)
+        - **Future Forecast**: (1 sentence)
+        - Use Markdown, BOLDS and Bullets. Keep it professional and concise.
         """
         try:
             response = model.generate_content(prompt)

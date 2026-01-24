@@ -14,6 +14,7 @@ const Sidebar = () => {
         ...(user?.role === 'Patient' ? [
             { icon: Calendar, label: 'Book Appointment', path: '/book-appointment' },
             { icon: Activity, label: 'My Records', path: '/records' },
+            { icon: Brain, label: 'AI Symptom Checker', path: '/symptom-checker' },
         ] : []),
 
         // Doctor specific
@@ -35,7 +36,7 @@ const Sidebar = () => {
             { icon: Users, label: 'Patients', path: '/patients' },
             { icon: Stethoscope, label: 'Doctors', path: '/doctors' },
             { icon: Activity, label: 'All Records', path: '/records' },
-            { icon: Brain, label: 'System Insights', path: '/ai-insights' },
+            { icon: Brain, label: 'System Insights', path: '/system-insights' },
             { icon: Settings, label: 'Settings', path: '/settings' },
         ] : []),
     ];

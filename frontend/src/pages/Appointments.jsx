@@ -228,7 +228,7 @@ const Appointments = () => {
             </div>
 
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold">Schedule Appointment</h3>
@@ -275,7 +275,7 @@ const Appointments = () => {
             )}
 
             {showRescheduleModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold">Reschedule Request</h3>
