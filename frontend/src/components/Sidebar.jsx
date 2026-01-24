@@ -36,7 +36,7 @@ const Sidebar = () => {
             { icon: Users, label: 'Patients', path: '/patients' },
             { icon: Stethoscope, label: 'Doctors', path: '/doctors' },
             { icon: Activity, label: 'All Records', path: '/records' },
-            { icon: Brain, label: 'System Insights', path: '/ai-insights' },
+            { icon: Brain, label: 'System Insights', path: '/system-insights' },
             { icon: Settings, label: 'Settings', path: '/settings' },
         ] : []),
     ];

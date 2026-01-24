@@ -112,3 +112,21 @@ def patient_chat():
         response = gemini_service.hospital_faq(message)
         
     return jsonify({'response': response}), 200
+
+@ai_bp.route('/ai/system-report', methods=['GET'])
+def system_report():
+    # Fetch global stats
+    from models.patient import Patient
+    from models.doctor import Doctor
+    from models.appointment import Appointment
+    from models.medical_record import MedicalRecord
+    
+    stats = {
+        'total_patients': Patient.query.count(),
+        'total_doctors': Doctor.query.count(),
+        'total_appointments': Appointment.query.count(),
+        'total_records': MedicalRecord.query.count()
+    }
+    
+    report = gemini_service.generate_system_report(stats)
+    return jsonify({'report': report}), 200

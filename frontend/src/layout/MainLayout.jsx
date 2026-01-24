@@ -70,7 +70,7 @@ const MainLayout = () => {
             <Sidebar />
 
             <main className="pl-64 min-h-screen transition-all duration-300 flex flex-col">
-                <header className="h-20 px-8 flex items-center justify-between sticky top-0 z-40 bg-white/50 backdrop-blur-md border-b border-white/20">
+                <header className="h-20 px-8 flex items-center justify-between sticky top-0 z-40 bg-white border-b border-slate-100">
                     <div className="flex items-center gap-4 w-96">
                         <div className="relative w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />

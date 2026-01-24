@@ -213,4 +213,24 @@ class GeminiService:
         except Exception as e:
             return f"Error: {str(e)}"
 
+    def generate_system_report(self, stats):
+        model = self._get_model()
+        if not model: return "AI Service Unavailable"
+
+        prompt = f"""
+        Act as a Hospital Management Consultant. Analyze these hospital stats: {json.dumps(stats)}.
+        Provide a professional executive summary.
+        Formatting Rules:
+        - **Executive Overview**: (Short paragraph)
+        - **Operational Highlights**: (Bullets)
+        - **Resource Recommendations**: (Actionable bullets)
+        - **Future Forecast**: (1 sentence)
+        - Use Markdown, BOLDS and Bullets. Keep it professional and concise.
+        """
+        try:
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            return f"Error: {str(e)}"
+
 gemini_service = GeminiService()

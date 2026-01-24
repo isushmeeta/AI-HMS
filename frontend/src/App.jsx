@@ -17,6 +17,8 @@ import PatientBooking from './pages/PatientBooking';
 import ReceptionistBooking from './pages/ReceptionistBooking';
 import Profile from './pages/Profile';
 import PatientAI from './pages/PatientAI';
+import AdminSettings from './pages/AdminSettings';
+import SystemInsights from './pages/SystemInsights';
 
 function App() {
   return (
@@ -47,6 +49,8 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="profile" element={<Profile />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="system-insights" element={<SystemInsights />} />
             <Route path="*" element={<div className="p-8 text-center text-slate-500">Page not found</div>} />
           </Route>
         </Routes>

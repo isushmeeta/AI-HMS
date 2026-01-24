@@ -190,3 +190,21 @@ def get_current_user():
         return jsonify(user_data), 200
     except Exception:
         return jsonify({'error': 'Invalid token'}), 401
+
+@auth_bp.route('/users', methods=['GET'])
+def list_users():
+    # In a real app, add admin check here
+    users = User.query.all()
+    return jsonify([u.to_dict() for u in users]), 200
+
+@auth_bp.route('/users/<int:id>', methods=['DELETE'])
+def delete_user(id):
+    user = User.query.get_or_404(id)
+    try:
+        # Also handle related records if necessary, but keep it simple for now
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'message': 'User deleted'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
