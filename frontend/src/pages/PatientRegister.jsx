@@ -12,6 +12,8 @@ const countryCodes = [
     { code: '+81', label: 'JP (+81)', minLength: 10 },
 ];
 
+import api from '../services/api';
+
 const PatientRegister = () => {
     const [formData, setFormData] = useState({
         username: '',
@@ -62,24 +64,18 @@ const PatientRegister = () => {
         const fullMobile = `${formData.countryCode}${formData.mobileNumber}`;
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...formData,
-                    mobile: fullMobile
-                })
+            const response = await api.post('/auth/register', {
+                ...formData,
+                mobile: fullMobile
             });
 
-            const data = await response.json();
-            if (response.ok) {
-                toast.success('Registration successful! Please login.');
-                navigate('/login');
-            } else {
-                toast.error(data.error || 'Registration failed');
-            }
+            // api.post returns the response object directly (via axios interceptor or just axios response)
+            // But usually axios throws on 4xx/5xx, so we just handle success here
+            toast.success('Registration successful! Please login.');
+            navigate('/login');
         } catch (err) {
-            toast.error('Registration failed. Please try again.');
+            const errorMsg = err.response?.data?.error || 'Registration failed';
+            toast.error(errorMsg);
         }
     };
 
