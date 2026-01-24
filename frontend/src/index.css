@@ -63,3 +63,64 @@
   font-weight: 700 !important;
   color: #0f172a !important;
 }
+
+@layer utilities {
+  @media print {
+
+    /* Hide everything by default */
+    body * {
+      visibility: hidden;
+    }
+
+    /* Only show the element with 'printable-record' class and its children */
+    .printable-record,
+    .printable-record * {
+      visibility: visible;
+    }
+
+    /* Position the printable record at the top left */
+    .printable-record {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 40px !important;
+      border: 1px solid #e2e8f0 !important;
+      box-shadow: none !important;
+      background: white !important;
+      border-radius: 0 !important;
+    }
+
+    /* Print specific tweaks */
+    .printable-record h3 {
+      color: #0d9488 !important;
+      /* Teal-600 */
+    }
+
+    /* Hide specific elements inside the record that shouldn't be printed */
+    .no-print {
+      display: none !important;
+    }
+
+    /* Ensure colors are printed */
+    body {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      background: white !important;
+    }
+
+    /* Hide sidebar and header */
+    aside,
+    header,
+    .no-print-global {
+      display: none !important;
+    }
+
+    /* Remove animations during print */
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
