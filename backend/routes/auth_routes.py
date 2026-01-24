@@ -11,10 +11,8 @@ auth_bp = Blueprint('auth_bp', __name__)
 def validate_registration(data):
     # 1. Email Validation
     email = data.get('email', '')
-    allowed_domains = ['gmail.com', 'ymail.com', 'outlook.com', 'yahoo.com', 'icloud.com']
-    domain = email.split('@')[-1] if '@' in email else ''
-    if domain not in allowed_domains:
-        return "Email must be one of: " + ", ".join(allowed_domains)
+    if '@' not in email or '.' not in email:
+        return "Invalid email address format"
 
     # 2. Password Validation
     password = data.get('password', '')

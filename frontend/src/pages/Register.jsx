@@ -35,10 +35,8 @@ const Register = () => {
 
     const validate = () => {
         // Email Validation
-        const allowedDomains = ['gmail.com', 'ymail.com', 'outlook.com', 'yahoo.com', 'icloud.com'];
-        const domain = formData.email.split('@')[1];
-        if (!allowedDomains.includes(domain)) {
-            toast.error(`Email domain must be: ${allowedDomains.join(', ')}`);
+        if (!formData.email.includes('@')) {
+            toast.error("Invalid email format");
             return false;
         }
 
