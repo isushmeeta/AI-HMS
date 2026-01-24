@@ -9,6 +9,7 @@ const SystemInsights = () => {
     const [report, setReport] = useState('');
     const [loading, setLoading] = useState(false);
     const [stats, setStats] = useState(null);
+    const [isPrinting, setIsPrinting] = useState(false);
 
     useEffect(() => {
         fetchStats();
@@ -34,6 +35,14 @@ const SystemInsights = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePrint = () => {
+        setIsPrinting(true);
+        setTimeout(() => {
+            window.print();
+            setIsPrinting(false);
+        }, 100);
     };
 
     return (
@@ -121,7 +130,7 @@ const SystemInsights = () => {
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.98 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="glass-panel p-8 md:p-12 shadow-xl shadow-slate-200/50 bg-white relative overflow-hidden"
+                                className={`glass-panel p-8 md:p-12 shadow-xl shadow-slate-200/50 bg-white relative overflow-hidden ${isPrinting ? 'printable-record' : ''}`}
                             >
                                 <div className="absolute top-0 right-0 p-8 opacity-5">
                                     <Brain size={150} />
@@ -150,8 +159,8 @@ const SystemInsights = () => {
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Verified by Gemini AI</span>
                                         </div>
                                         <button
-                                            onClick={() => window.print()}
-                                            className="text-xs font-bold text-slate-400 hover:text-primary transition-colors flex items-center gap-2"
+                                            onClick={handlePrint}
+                                            className="text-xs font-bold text-slate-400 hover:text-primary transition-colors flex items-center gap-2 no-print"
                                         >
                                             Export PDF <RefreshCw size={12} />
                                         </button>

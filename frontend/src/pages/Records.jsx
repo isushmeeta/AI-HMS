@@ -478,6 +478,18 @@ const Records = () => {
                                     >
                                         {/* Action buttons at top right matching photo style */}
                                         <div className="absolute top-8 right-8 flex gap-2 z-20 no-print">
+                                            <InlineConfirm
+                                                onConfirm={() => handleDeleteRecord(record.id, record.type)}
+                                                message="Delete this record?"
+                                                confirmText="Delete"
+                                            >
+                                                <button
+                                                    className="p-2.5 bg-[#FFF1F2] text-[#E11D48] hover:bg-red-100 rounded-xl transition-all shadow-sm border border-red-50"
+                                                    title="Delete Record"
+                                                >
+                                                    <Trash size={18} strokeWidth={2.5} />
+                                                </button>
+                                            </InlineConfirm>
                                             <button
                                                 onClick={() => handlePrint(record.id)}
                                                 className="p-2.5 bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all border border-slate-100"
@@ -493,20 +505,6 @@ const Records = () => {
                                                 >
                                                     <Pencil size={18} strokeWidth={2.5} />
                                                 </button>
-                                            )}
-                                            {user?.role !== 'Patient' && (
-                                                <InlineConfirm
-                                                    onConfirm={() => handleDeleteRecord(record.id, record.type)}
-                                                    message="Delete this record?"
-                                                    confirmText="Delete"
-                                                >
-                                                    <button
-                                                        className="p-2.5 bg-[#FFF1F2] text-[#E11D48] hover:bg-red-100 rounded-xl transition-all shadow-sm border border-red-50"
-                                                        title="Delete Record"
-                                                    >
-                                                        <Trash size={18} strokeWidth={2.5} />
-                                                    </button>
-                                                </InlineConfirm>
                                             )}
                                         </div>
 
