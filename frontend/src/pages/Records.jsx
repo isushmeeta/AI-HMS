@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, FileText, Search, User, Stethoscope, Trash, Sparkles, Pencil } from 'lucide-react';
+import { Plus, FileText, Search, User, Stethoscope, Trash, Sparkles, Pencil, Printer } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -20,6 +20,7 @@ const Records = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [autoFillProcessed, setAutoFillProcessed] = useState(false);
+    const [printingId, setPrintingId] = useState(null);
 
     // Form States
     const [formData, setFormData] = useState({
@@ -317,6 +318,15 @@ const Records = () => {
         setShowModal(true);
     };
 
+    const handlePrint = (recordId) => {
+        setPrintingId(recordId);
+        // We need a small delay to ensure the class is applied before print dialog opens
+        setTimeout(() => {
+            window.print();
+            setPrintingId(null);
+        }, 100);
+    };
+
     const filteredRecords = records.filter(r => {
         const matchesSearch = r.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             r.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
@@ -464,10 +474,29 @@ const Records = () => {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.05 }}
                                         key={record.id + (record.type || 'record')}
-                                        className="bg-white border border-slate-100 rounded-xl p-8 hover:shadow-lg transition-all group relative overflow-hidden"
+                                        className={`bg-white border border-slate-100 rounded-xl p-8 hover:shadow-lg transition-all group relative overflow-hidden ${printingId === record.id ? 'printable-record' : ''}`}
                                     >
                                         {/* Action buttons at top right matching photo style */}
-                                        <div className="absolute top-8 right-8 flex gap-2 z-20">
+                                        <div className="absolute top-8 right-8 flex gap-2 z-20 no-print">
+                                            <InlineConfirm
+                                                onConfirm={() => handleDeleteRecord(record.id, record.type)}
+                                                message="Delete this record?"
+                                                confirmText="Delete"
+                                            >
+                                                <button
+                                                    className="p-2.5 bg-[#FFF1F2] text-[#E11D48] hover:bg-red-100 rounded-xl transition-all shadow-sm border border-red-50"
+                                                    title="Delete Record"
+                                                >
+                                                    <Trash size={18} strokeWidth={2.5} />
+                                                </button>
+                                            </InlineConfirm>
+                                            <button
+                                                onClick={() => handlePrint(record.id)}
+                                                className="p-2.5 bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all border border-slate-100"
+                                                title="Download PDF / Print"
+                                            >
+                                                <Printer size={18} strokeWidth={2.5} />
+                                            </button>
                                             {user?.role !== 'Patient' && record.type !== 'appointment' && (
                                                 <button
                                                     onClick={() => handleEditRecord(record)}
@@ -476,20 +505,6 @@ const Records = () => {
                                                 >
                                                     <Pencil size={18} strokeWidth={2.5} />
                                                 </button>
-                                            )}
-                                            {user?.role !== 'Patient' && (
-                                                <InlineConfirm
-                                                    onConfirm={() => handleDeleteRecord(record.id, record.type)}
-                                                    message="Delete this record?"
-                                                    confirmText="Delete"
-                                                >
-                                                    <button
-                                                        className="p-2.5 bg-[#FFF1F2] text-[#E11D48] hover:bg-red-100 rounded-xl transition-all shadow-sm border border-red-50"
-                                                        title="Delete Record"
-                                                    >
-                                                        <Trash size={18} strokeWidth={2.5} />
-                                                    </button>
-                                                </InlineConfirm>
                                             )}
                                         </div>
 

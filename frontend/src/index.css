@@ -63,3 +63,84 @@
   font-weight: 700 !important;
   color: #0f172a !important;
 }
+
+@layer utilities {
+  @media print {
+
+    /* Hide top-level layout components from flow */
+    aside,
+    header,
+    footer,
+    .no-print-global,
+    .no-print {
+      display: none !important;
+    }
+
+    /* Target the main containers of the printable area */
+    body,
+    #root,
+    main,
+    .flex-1 {
+      height: auto !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: white !important;
+    }
+
+    /* 1. Hide everything visually */
+    body * {
+      visibility: hidden;
+    }
+
+    /* 2. Reveal ONLY the printable record and its children */
+    .printable-record,
+    .printable-record * {
+      visibility: visible !important;
+    }
+
+    /* 3. Position the printable record to occupy the top of the first page */
+    .printable-record {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 100% !important;
+      display: block !important;
+      padding: 40px !important;
+      border: 1px solid #e2e8f0 !important;
+      box-shadow: none !important;
+      background: white !important;
+      border-radius: 0 !important;
+    }
+
+    /* Print specific tweaks */
+    .printable-record h3 {
+      color: #0d9488 !important;
+    }
+
+    /* Ensure background colors/images are printed */
+    body {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Prevent empty space from other cards/elements */
+    /* If cards are in a grid/list, hide their containers if they don't contain the printable record */
+    /* This generic rule hides other cards in same containers */
+    .glass-card:not(:has(.printable-record)),
+    .glass-panel:not(:has(.printable-record)) {
+      display: none !important;
+    }
+
+    /* Remove animations */
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+
+    @page {
+      margin: 0;
+      size: auto;
+    }
+  }
+}
