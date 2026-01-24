@@ -8,3 +8,4 @@ pandas
 scikit-learn
 numpy
 google-generativeai
+gunicorn==21.2.0
